@@ -316,8 +316,37 @@ static void printError (int errcode, char *cmd_name)
 static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itotal, uint32_t nclusttotal,
                              unsigned char *name)
 {
+  p_sb->magic = MAGIC_NUMBER;
+  p_sb->version = VERSION_NUMBER;
+  /* o nome fica correto? */
+  p_sb->name[PARTITION_NAME_SIZE+1] = name;
+  p_sb->nTotal = ntotal;
+  p_sb->mStat = PRU;
+  /*DÚVIDAS existe algum define para o valor 1? */
+  
+  /* iNodes */
+  p_sb->iTableStart = 1;
+  p_sb->iTableSize = itotal / IPB;
+  p_sb->iTotal = itotal;
+  p_sb->iFree = itotal - 1;
+  p_sb->iHead = 1;
+  p_sb->iTail = itotal - 1;
 
-  /* insert your code here */
+  /* data clusters (cache) */
+  p_sb->dZoneStart = p_sb->iTableSize + 1;
+  p_sb->dZoneTotal = nclusttotal;
+
+  /* DÚVIDAS nclusttotal - 1 por causa do . (root)? */
+  p_sb->dZoneFree = nclusttotal - 1; 
+  p_sb->dZoneRetriev.cacheIdx = DZONE_CACHE_SIZE;
+  p_sb->dZoneInsert.cacheIdx = 0;
+
+  /* data clusters */
+  p_sb->dHead = 1; /* 0 é a raiz, root */
+  p_sb->dTail = nclusttotal - 1; 
+
+  /* DÚVIDAS como calcular a zona reservada */
+  p_sb->reserved = RESERV_AREA_SIZE;
 
   return 0;
 }
