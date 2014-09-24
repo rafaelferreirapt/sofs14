@@ -402,22 +402,36 @@ static int fillInINT (SOSuperBlock *p_sb)
 static int fillInRootDir (SOSuperBlock *p_sb)
 {
 
-  /* temos de começar por criar o data cluster do root */
-  soDataClust rootCluster;
+  /* temos de começar por criar um cluster da zona de dados que será o 0 neste caso, vai conter a informação da raiz */
+  SODataClust rootCluster;
   /* o soDataClust tem 3 campos: prev, next, stat e info */
   rootCluster.prev = NULL_CLUSTER;
   rootCluster.next = NULL_CLUSTER;
   rootCluster.stat = 0; /* status of the data cluster */
 
-  /* DÚVIDA na tabela de inodes temos de criar uma entrada para os atributos de ambas as pastas "." e ".." ou isto é criado em cima? */
+  /* terá informação guardada,que é um conjunto de entradas de directórios */
+  /* O cluster vai ter DPC entradas de diretório, das quais a 1º será a ., a 2ª a .. e as restantes estarão vazias. */
+  /*
+  typedef struct soDirEntry{
+    unsigned char name[MAX_NAME+1];
+    uint32_t nInode;
+  } SODirEntry;
+  */
+  SODirEntry root1 = {".\0", 0};
+  SODirEntry root1 = {"..\0", 0};
+  SODirEntry emptyDir = {"\0", NULL_INODE}; 
 
-  /* depois temos de criar dois diretórios para o diretorio root, o "." e o ".." para isso vamos usar a "Data Structures" => ooDirEntry */
+  rootCluster.info.de[0] = root1;
+  rootCluster.info.de[1] = root2;
 
-  /* depois colocamos lá os dois soDirEntry e apagamos o resto do conteúdo */
+  int i = 2;
+  for (; i < count; ++i){
+    rootCluster.info.de[i] = emptyDir;
+  }
 
   /* depois temos de escrever o soDataClust.. */
-
-  return 0;
+  /* soWriteCacheCluster => sofs_buffercache.h */
+  return soWriteCacheCluster(p_sb->dZoneStart, &rootCluster);
 }
 
   /*
