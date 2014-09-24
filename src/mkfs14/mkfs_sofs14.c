@@ -402,7 +402,20 @@ static int fillInINT (SOSuperBlock *p_sb)
 static int fillInRootDir (SOSuperBlock *p_sb)
 {
 
-  /* insert your code here */
+  /* temos de começar por criar o data cluster do root */
+  soDataClust rootCluster;
+  /* o SODataClust tem 3 campos: prev, next, stat e info */
+  rootCluster.prev = NULL_CLUSTER;
+  rootCluster.next = NULL_CLUSTER;
+  rootCluster.stat = 0; /*DÚVIDAS status of the data cluster ? */
+
+  /* DÚVIDA na tabela de inodes temos de criar uma entrada para os atributos de ambas as pastas "." e ".." ou isto é criado em cima? */
+
+  /* depois temos de criar dois diretórios para o diretorio root, o "." e o ".." para isso vamos usar a "Data Structures" => ooDirEntry */
+
+  /* depois colocamos lá os dois soDirEntry e apagamos o resto do conteúdo */
+
+  /* depois temos de escrever o soDataClust.. */
 
   return 0;
 }
