@@ -359,7 +359,36 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
 static int fillInINT (SOSuperBlock *p_sb)
 {
 
-  /* insert your code here */
+  SOInode* table;
+  int stat, i, pos;
+
+  //filling first iNode
+
+  if((stat = soLoadBlockInT(0)) != 0) return stat;
+
+  table = soGetBlockInT();
+  table[0].mode = INODE_DIR | INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP | INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH;
+
+  table[0].refCount = 2;
+  table[0].owner = getuid(); //ou 0, como é o primeiro? e é zero quando utilizamos o que o prof nos deu.
+  table[0].group = getgid(); //ou 0
+
+  //table[0].size = ???
+
+  table[0].vD1.atime = time(NULL);
+  table[0].vD2.mtime = time(NULL);
+
+  table[0].d[0] = 0;
+
+  for(pos = 1; pos < N_DIRECT; pos++){
+    table[0].d[pos] = NULL_CLUSTER;
+  }
+
+  table[0].i1 = NULL_CLUSTER;
+  table[0].i2 = NULL_CLUSTER;
+
+  //resto dos INodes free
+
 
   return 0;
 }
