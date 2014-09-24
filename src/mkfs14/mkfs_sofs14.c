@@ -360,7 +360,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 {
 
   SOInode* table;
-  int stat, i, pos;
+  int stat, pos;
 
   //filling first iNode
 
@@ -375,8 +375,8 @@ static int fillInINT (SOSuperBlock *p_sb)
 
   //table[0].size = ???
 
-  table[0].vD1.atime = time(NULL);
-  table[0].vD2.mtime = time(NULL);
+  table[0].vD1.aTime = time(NULL);
+  table[0].vD2.mTime = time(NULL);
 
   table[0].d[0] = 0;
 
@@ -418,14 +418,14 @@ static int fillInRootDir (SOSuperBlock *p_sb)
   } SODirEntry;
   */
   SODirEntry root1 = {".\0", 0};
-  SODirEntry root1 = {"..\0", 0};
+  SODirEntry root2 = {"..\0", 0};
   SODirEntry emptyDir = {"\0", NULL_INODE}; 
 
   rootCluster.info.de[0] = root1;
   rootCluster.info.de[1] = root2;
 
   int i = 2;
-  for (; i < count; ++i){
+  for (; i < DPC; ++i){
     rootCluster.info.de[i] = emptyDir;
   }
 
