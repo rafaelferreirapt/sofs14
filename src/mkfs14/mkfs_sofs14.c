@@ -360,20 +360,23 @@ static int fillInINT (SOSuperBlock *p_sb)
 {
 
   SOInode* table;
-  int stat, pos;
+  int stat, pos, aux1;
+
+  SODataClust temp;
+  
 
   //filling first iNode
 
   if((stat = soLoadBlockInT(0)) != 0) return stat;
 
   table = soGetBlockInT();
-  table[0].mode = INODE_DIR | INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP | INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH;
+  table[0].mode =INODE_FREE | INODE_DIR | INODE_FILE | INODE_SYMLINK | INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP | INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH;  //Marco acresentou os campos todos...
 
   table[0].refCount = 2;
   table[0].owner = getuid(); //ou 0, como é o primeiro? e é zero quando utilizamos o que o prof nos deu.
   table[0].group = getgid(); //ou 0
 
-  //table[0].size = ???
+  table[0].size =sizeof(temp.de);
 
   table[0].vD1.aTime = time(NULL);
   table[0].vD2.mTime = time(NULL);
@@ -389,8 +392,43 @@ static int fillInINT (SOSuperBlock *p_sb)
 
   //resto dos INodes free
 
+	for(aux1=1;aux1 < p_sb->iTotal;aux1++){
+	  table[aux1].mode=INODE_FREE;	
+	  table[aux1].refCount = 0;
+  	  table[aux1].owner =0;
+  	  table[aux1].group =0;
+	  table[aux1].size =0;
 
-  return 0;
+
+	for(pos2=0;pos2<N_DIRECT;pos2++){
+
+	table[aux1].d[pos2]=NULL_CLUSTER;
+	}
+
+	
+	table[aux1].i1=NULL_CLUSTER;
+	table[aux1].i2=NULL_CLUSTER;
+
+	
+	if(aux1==1)
+	  table[aux1].VD2.prev=p_sb->itotal-1;
+	else
+	  table[aux1].VD2.prev=aux1-1;
+
+	if(aux1==p_sb->itotal-1){
+
+	table[aux1].VD1.next=1;
+	
+	else
+
+	table[aux1].VD1.next=aux1+1;
+}
+
+	
+	if(error=soStoreBlockInt()!=0)
+	return error;
+	
+	return 0;
 }
 
 /*
