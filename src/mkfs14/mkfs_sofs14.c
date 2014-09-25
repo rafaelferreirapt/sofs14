@@ -360,8 +360,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 {
 
   SOInode* table;
-  int stat, pos, aux1;
-
+  int stat, pos,pos2, aux1,error;
   SODataClust temp;
   
 
@@ -376,7 +375,7 @@ static int fillInINT (SOSuperBlock *p_sb)
   table[0].owner = getuid(); //ou 0, como é o primeiro? e é zero quando utilizamos o que o prof nos deu.
   table[0].group = getgid(); //ou 0
 
-  table[0].size =sizeof(temp.de);
+  table[0].size =sizeof(temp.info.de);
 
   table[0].vD1.aTime = time(NULL);
   table[0].vD2.mTime = time(NULL);
@@ -411,17 +410,17 @@ static int fillInINT (SOSuperBlock *p_sb)
 
 	
 	if(aux1==1)
-	  table[aux1].VD2.prev=p_sb->itotal-1;
+	  table[aux1].vD2.prev=p_sb->iTotal-1;
 	else
-	  table[aux1].VD2.prev=aux1-1;
+	  table[aux1].vD2.prev=aux1-1;
 
-	if(aux1==p_sb->itotal-1){
+	if(aux1==p_sb->iTotal-1)
 
-	table[aux1].VD1.next=1;
+	table[aux1].vD1.next=1;
 	
 	else
 
-	table[aux1].VD1.next=aux1+1;
+	table[aux1].vD1.next=aux1+1;
 }
 
 	
