@@ -316,20 +316,26 @@ static void printError (int errcode, char *cmd_name)
 static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itotal, uint32_t nclusttotal,
                              unsigned char *name)
 {
-  p_sb->magic = MAGIC_NUMBER;
+  p_sb->magic = 0xFFFF; /*MAGIC_NUMBER;*/
   p_sb->version = VERSION_NUMBER;
-  /* o nome fica correto? */
-  p_sb->name[PARTITION_NAME_SIZE+1] = name;
+  
+  /* inserir o nome */
+  unsigned int i = 0;
+  for( ; name[i]!='\0' && i<PARTITION_NAME_SIZE){
+    p_sb->name[i] = name[i++];
+  }
+  p_sb->name[i] = '\0';
+
   p_sb->nTotal = ntotal;
-  p_sb->mStat = PRU;
+  p_sb->mStat = PRU; /* formatar => foi bem desmontado */
   /*DÚVIDAS existe algum define para o valor 1? */
   
   /* iNodes */
-  p_sb->iTableStart = 1;
-  p_sb->iTableSize = itotal / IPB;
+  p_sb->iTableStart = 1;  /* o superbloco é o bloco 0 */
+  p_sb->iTableSize = (itotal / IPB) + (itotal % IPB); /* nº blocos da tabela de iNodes */
   p_sb->iTotal = itotal;
-  p_sb->iFree = itotal - 1;
-  p_sb->iHead = 1;
+  p_sb->iFree = itotal - 1; /* o 1º está ocupado com a raiz */
+  p_sb->iHead = 1; /* 0 => raiz */
   p_sb->iTail = itotal - 1;
 
   /* data clusters (cache) */
@@ -337,6 +343,13 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   p_sb->dZoneTotal = nclusttotal;
 
   /* DÚVIDAS nclusttotal - 1 por causa do . (root)? */
+  unsigned int i;
+  for (i = 0; i < DZONE_CACHE_SIZE; ++i){
+      p_sb->dZoneRetriev.cache[i] = NULL_CLUSTER;
+      p_sb->dZoneInsert.cache[i] = NULL_CLUSTER;
+  }
+
+
   p_sb->dZoneFree = nclusttotal - 1; 
   p_sb->dZoneRetriev.cacheIdx = DZONE_CACHE_SIZE;
   p_sb->dZoneInsert.cacheIdx = 0;
@@ -345,8 +358,9 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   p_sb->dHead = 1; /* 0 é a raiz, root */
   p_sb->dTail = nclusttotal - 1; 
 
-  /* DÚVIDAS como calcular a zona reservada */
-  p_sb->reserved = RESERV_AREA_SIZE;
+  for (i = 0; i < RESERV_AREA_SIZE; ++i){
+    p_sb->reserved[i] = 0xee;
+  }
 
   return 0;
 }
