@@ -464,7 +464,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 				pToBckInode[idxInodesOfBck].vD2.prev = NULL_INODE;
 			}else{
 				/*caso não seja o iNode 1 do primeiro bloco, decrementa-se 2 ao next*/
-				pToBckInode[idxInodesOfBck].vD2.prev = pToBckInode[idxInodesOfBck].vD1.next - 2;
+				pToBckInode[idxInodesOfBck].vD2.prev = idxBckOfInodes * IPB + idxInodesOfBck - 1;
 			}
 		}
 
