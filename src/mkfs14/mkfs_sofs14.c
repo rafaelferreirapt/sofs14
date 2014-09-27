@@ -511,6 +511,7 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 {
 
+<<<<<<< Updated upstream
   SODataClust clust;
   uint32_t i;
   uint32_t wri;
@@ -535,6 +536,54 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
     wri = soWriteCacheCluster (p_sb->dzone_start +i*BLOCKS_PER_CLUSTER, &clust);
   }
   return wri;
+=======
+	/* Criar a ligação entre clusters (lista ligada) */
+	
+	SODataClust *c;	// Criação de um ponteiro para cluster de dados
+	uint32_t i;		// variavel usada para correr a zona de dados
+	
+	for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
+	{
+ 
+		if(i == (p_sb->dZoneStart + BLOCKS_PER_CLUSTER)) // O primeiro cluster não possui nenhum antes
+		{
+			c->prev = NULL_CLUSTER;
+			c->next = i+BLOCKS_PER_CLUSTER;
+			
+		}else if (i>(p_sb->dZoneStart + BLOCKS_PER_CLUSTER) && i<(p_sb->dZoneStart + (p_sb->dZoneTotal-1 * BLOCKS_PER_CLUSTER))) // restantes clusters
+		{
+			c->prev = i-BLOCKS_PER_CLUSTER;
+			c->next = i+BLOCKS_PER_CLUSTER;
+
+		}else                                          // O último cluster não aponta para nada
+		{
+			c->prev = i-BLOCKS_PER_CLUSTER;
+			c->next = NULL_CLUSTER;	
+		}
+		
+		if(soWriteCacheCluster(i,&c) != 0)				// Armazena informação
+			{
+				return soWriteCacheCluster(i,&c);
+			}
+	}
+	
+   /* Zero mode */
+	if (zero)   		// Teste da flag
+	{
+		memset(&c,0x00,BSLPC); // Conteúdo informativo do cluster a zero
+		
+		for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
+		{
+			if(soWriteCacheCluster(i,&c) != 0)		 // Armazena informação
+			{
+				return soWriteCacheCluster(i,&c);
+			}
+		}
+	}
+	
+
+	return 0;
+>>>>>>> Stashed changes
 }
 
 /*
