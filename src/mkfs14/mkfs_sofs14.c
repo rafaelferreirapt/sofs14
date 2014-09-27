@@ -527,37 +527,9 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 {
 
-	/* Bernardo
-	 * 
-	 SODataClust clust;
-	 uint32_t i;
-	 uint32_t wri;
-
-	 for(i=1; i<p_sb->dzone_total; i++)
-	 {
-	 if(i==p_sb->dzone_total-1)
-	 {
-	 clust.next=NULL_CLUSTER;
-
-	 if(i==1) clust.prev=NULL_CLUSTER;
-	 else clust.prev=i-1;
-
-	 }else{
-	 clust.next=i+1;
-
-	 if(i==1) clust.prev=NULL_CLUSTER;
-	 else clust.prev=i-1;
-
-	 }
-	 clust.stat=NULL_INODE;
-	 wri = soWriteCacheCluster (p_sb->dzone_start +i*BLOCKS_PER_CLUSTER, &clust);
-	 }
-	 return wri;
-	 * */
-
 	/* Criar a ligação entre clusters (lista ligada) */
 
-	SODataClust *c;	// Criação de um ponteiro para cluster de dados
+	SODataClust c;	// Criação de um ponteiro para cluster de dados
 	uint32_t i;		// variavel usada para correr a zona de dados
 
 	for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
@@ -565,18 +537,18 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 
 		if(i == (p_sb->dZoneStart + BLOCKS_PER_CLUSTER)) // O primeiro cluster não possui nenhum antes
 		{
-			c->prev = NULL_CLUSTER;
-			c->next = i+BLOCKS_PER_CLUSTER;
+			c.prev = NULL_CLUSTER;
+			c.next = i+BLOCKS_PER_CLUSTER;
 
 		}else if (i>(p_sb->dZoneStart + BLOCKS_PER_CLUSTER) && i<(p_sb->dZoneStart + (p_sb->dZoneTotal-1 * BLOCKS_PER_CLUSTER))) // restantes clusters
 		{
-			c->prev = i-BLOCKS_PER_CLUSTER;
-			c->next = i+BLOCKS_PER_CLUSTER;
+			c.prev = i-BLOCKS_PER_CLUSTER;
+			c.next = i+BLOCKS_PER_CLUSTER;
 
 		}else                                          // O último cluster não aponta para nada
 		{
-			c->prev = i-BLOCKS_PER_CLUSTER;
-			c->next = NULL_CLUSTER;	
+			c.prev = i-BLOCKS_PER_CLUSTER;
+			c.next = NULL_CLUSTER;	
 		}
 
 		if(soWriteCacheCluster(i,&c) != 0)				// Armazena informação
