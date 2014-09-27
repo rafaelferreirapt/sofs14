@@ -321,8 +321,8 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   
   /* inserir o nome */
   unsigned int i = 0;
-  for( ; name[i]!='\0' && i<PARTITION_NAME_SIZE){
-    p_sb->name[i] = name[i++];
+  for( ; name[i]!='\0' && i<PARTITION_NAME_SIZE; i++){
+    p_sb->name[i] = name[i];
   }
   p_sb->name[i] = '\0';
 
@@ -343,7 +343,6 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   p_sb->dZoneTotal = nclusttotal;
 
   /* DÚVIDAS nclusttotal - 1 por causa do . (root)? */
-  unsigned int i;
   for (i = 0; i < DZONE_CACHE_SIZE; ++i){
       p_sb->dZoneRetriev.cache[i] = NULL_CLUSTER;
       p_sb->dZoneInsert.cache[i] = NULL_CLUSTER;
