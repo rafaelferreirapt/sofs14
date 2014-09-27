@@ -399,7 +399,11 @@ static int fillInINT (SOSuperBlock *p_sb)
 	pToBckInode->vD1.aTime = time(NULL);
 	pToBckInode->vD2.mTime = time(NULL);
 
-	pToBckInode->d[0] = p_sb->dZoneStart;
+	/*
+	d [N_DIRECT]
+ 	- direct references to the data clusters that comprise the file information content
+ 	*/
+	pToBckInode->d[0] = 0; /* primeiro data cluster */
 
 	/*referencias a clusters a NULL*/
 	int i;
