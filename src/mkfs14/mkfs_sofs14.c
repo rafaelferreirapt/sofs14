@@ -511,7 +511,8 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 {
 
-<<<<<<< Updated upstream
+/* Bernardo
+ * 
   SODataClust clust;
   uint32_t i;
   uint32_t wri;
@@ -536,7 +537,8 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
     wri = soWriteCacheCluster (p_sb->dzone_start +i*BLOCKS_PER_CLUSTER, &clust);
   }
   return wri;
-=======
+  * */
+
 	/* Criar a ligação entre clusters (lista ligada) */
 	
 	SODataClust *c;	// Criação de um ponteiro para cluster de dados
@@ -583,7 +585,7 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 	
 
 	return 0;
->>>>>>> Stashed changes
+
 }
 
 /*
