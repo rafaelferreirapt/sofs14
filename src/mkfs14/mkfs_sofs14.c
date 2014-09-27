@@ -371,65 +371,14 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
 
 static int fillInINT (SOSuperBlock *p_sb)
 {
-	int stat;
-
-	/*preenchimento do 1º iNode*/
-	if((stat = soLoadBlockInT(0)) != 0) return stat; /* Load the contents of a specific block of the table of inodes into internal storage. Portanto é preciso ir buscar o SOInode, faz-se em baixo*/
-
-	SOInode* pToBckInode = soGetBlockInT(); /* Get a pointer to the contents of a specific block of the table of inodes. */
-
-	/*definir as permissões de acesso ao owner, group e other*/
-	pToBckInode->mode = 0x01ff | INODE_DIR;
-
-	/*número de directory entries associadas ao iNode, neste caso 2, "." e ".."*/
-	pToBckInode->refCount = 2;
-
-	/*obter os id do owner e do group*/
-	pToBckInode->owner = getuid();
-	pToBckInode->group = getgid();
-
-	/*size in bytes*/
-	/* REVIEW: não tenho a certeza que seja assim */
-	pToBckInode->size = DPC*sizeof(SODirEntry);/*numero maximo de directorios por cluster, o cluster fica formatado a estas entradas, sendo que as duas primeiras ficam em uso*/
-
-	/*size in clusters*/
-	pToBckInode->cluCount = 1;
-
-	/*como está ocupado o iNode, então as union vD1 e vD2, ficam reservadas ao tempo.*/
-	pToBckInode->vD1.aTime = time(NULL);
-	pToBckInode->vD2.mTime = time(NULL);
-
-	/*
-	d [N_DIRECT]
- 	- direct references to the data clusters that comprise the file information content
- 	*/
-	pToBckInode->d[0] = 0; /* primeiro data cluster */
-
-	/*referencias a clusters a NULL*/
-	int i;
-	for(i = 1; i < N_DIRECT; i++){
-		pToBckInode->d[i] = NULL_CLUSTER;
-	}
-
-	pToBckInode->i1 = NULL_CLUSTER;
-	pToBckInode->i2 = NULL_CLUSTER;
-
-	/* Store the contents of the block of the table of inodes resident in internal storage to the storage device.*/
-	if((stat=soStoreBlockInT())!=0){
-		return stat;
-	}
+	int stat, i;
+	SOInode* pToBckInode;
 
 	/* Inicializar os Free iNodes */
 	/* Vamos obter bloco a bloco apartir do bloco 0, temos de ter atenção que existem x inodes por bloco e já vamos usar um inode do bloco 0, esse vamos ter de o passar à frente */
 	int idxBckOfInodes, idxInodesOfBck;
 	for(idxBckOfInodes = 0; idxBckOfInodes < p_sb->iTableSize; idxBckOfInodes++){
-		/* se estivermos no bloco 0, temos de fazer com que o for apenas comece no inode 1*/
-		if(idxBckOfInodes == 0){
-			idxInodesOfBck = 1;
-		}else{
-			idxInodesOfBck = 0;
-		}
-
+		
 		/* vamos obter o bloco de inodes (InodesPerBlock, não se esqueçam!!!)*/
 		if((stat = soLoadBlockInT(idxBckOfInodes)) != 0){
 			return stat;
@@ -439,13 +388,16 @@ static int fillInINT (SOSuperBlock *p_sb)
 		pToBckInode = soGetBlockInT();
 
 		/* vamos percorrer o bloco de inodes, desde o inicial, 0 ou 1 até ao final (IPB) */
-		for(; idxInodesOfBck < IPB; idxInodesOfBck++){
+		for(idxInodesOfBck = 0; idxInodesOfBck < IPB; idxInodesOfBck++){
 			pToBckInode[idxInodesOfBck].mode = INODE_FREE;
 			pToBckInode[idxInodesOfBck].refCount = 0;
 			pToBckInode[idxInodesOfBck].owner = 0;
 			pToBckInode[idxInodesOfBck].group = 0;
 			pToBckInode[idxInodesOfBck].cluCount = 0;
 			pToBckInode[idxInodesOfBck].size = 0;
+
+			pToBckInode[idxInodesOfBck].vD2.prev = idxBckOfInodes * IPB + idxInodesOfBck - 1;
+			pToBckInode[idxInodesOfBck].vD1.next = idxBckOfInodes * IPB + idxInodesOfBck + 1;
 
 			/*inicializar as referecias a cluster a NULL*/
 			for(i=0; i<N_DIRECT; i++){
@@ -455,21 +407,6 @@ static int fillInINT (SOSuperBlock *p_sb)
 			pToBckInode[idxInodesOfBck].i1 = NULL_CLUSTER;
 			pToBckInode[idxInodesOfBck].i2 = NULL_CLUSTER;
 
-			/*se estivermos no ultimo iNode da tabela, entao o seguinte é NULL*/
-			if(idxBckOfInodes == p_sb->iTableSize - 1 && idxInodesOfBck == IPB - 1){
-				pToBckInode[idxInodesOfBck].vD1.next = NULL_INODE;
-			}else{
-				/*caso não seja o ultimo então incrementamos 1 no numero do iNode actual*/
-				pToBckInode[idxInodesOfBck].vD1.next = idxBckOfInodes * IPB + idxInodesOfBck + 1;
-			}
-
-			/* Se estivermos no iNode 1 do primeiro bloco, então o anterior é NULL*/
-			if(idxBckOfInodes == 0 && idxInodesOfBck == 1){
-				pToBckInode[idxInodesOfBck].vD2.prev = NULL_INODE;
-			}else{
-				/*caso não seja o iNode 1 do primeiro bloco, decrementa-se 2 ao next*/
-				pToBckInode[idxInodesOfBck].vD2.prev = idxBckOfInodes * IPB + idxInodesOfBck - 1;
-			}
 		}
 
 		if((stat = soStoreBlockInT()) != 0){
@@ -477,7 +414,69 @@ static int fillInINT (SOSuperBlock *p_sb)
 		}
 	}
 
-	return 0;
+	/*preenchimento do 1º iNode*/
+	/* Load the contents of a specific block of the table of inodes into internal storage. Portanto é preciso ir buscar o SOInode, faz-se em baixo*/
+	if((stat = soLoadBlockInT(0)) != 0){
+		return stat;
+	} 
+
+	pToBckInode = soGetBlockInT(); /* Get a pointer to the contents of a specific block of the table of inodes. */
+
+	/*definir as permissões de acesso ao owner, group e other*/
+	pToBckInode[0].mode = INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP |
+    INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH | INODE_DIR; 
+
+	/*número de directory entries associadas ao iNode, neste caso 2, "." e ".."*/
+	pToBckInode[0].refCount = 2;
+
+	/*obter os id do owner e do group*/
+	pToBckInode[0].owner = getuid();
+	pToBckInode[0].group = getgid();
+
+	/*size in bytes*/
+	/* REVIEW: não tenho a certeza que seja assim */
+	pToBckInode[0].size = DPC*sizeof(SODirEntry);/*numero maximo de directorios por cluster, o cluster fica formatado a estas entradas, sendo que as duas primeiras ficam em uso*/
+
+	/*size in clusters*/
+	pToBckInode[0].cluCount = 1;
+
+	/*como está ocupado o iNode, então as union vD1 e vD2, ficam reservadas ao tempo.*/
+	pToBckInode[0].vD1.aTime = time(NULL);
+	pToBckInode[0].vD2.mTime = time(NULL);
+	pToBckInode[1].vD2.prev = NULL_INODE;
+
+	/*
+	d [N_DIRECT]
+ 	- direct references to the data clusters that comprise the file information content
+ 	*/
+	pToBckInode[0].d[0] = 0; /* primeiro data cluster */
+
+	/*referencias a clusters a NULL*/
+	for(i = 1; i < N_DIRECT; i++){
+		pToBckInode[0].d[i] = NULL_CLUSTER;
+	}
+
+	pToBckInode[0].i1 = NULL_CLUSTER;
+	pToBckInode[0].i2 = NULL_CLUSTER;
+
+	/* Store the contents of the block of the table of inodes resident in internal storage to the storage device.*/
+	if((stat=soStoreBlockInT())!=0){
+		return stat;
+	}
+
+	/* ultimo bloco */
+	if((stat = soLoadBlockInT(p_sb->iTableSize -1)) != 0){
+      return stat;
+	}
+    
+    pToBckInode = soGetBlockInT();
+    pToBckInode[IPB-1].vD1.next = NULL_INODE;
+    
+    if((stat = soStoreBlockInT()) != 0){
+      return stat;
+    }
+    
+    return 0;
 }
 
 /*
