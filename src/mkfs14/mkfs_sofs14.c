@@ -371,7 +371,7 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
 
 static int fillInINT (SOSuperBlock *p_sb)
 {
-  int stat;
+	int stat;
 
 	/*preenchimento do 1º iNode*/
 	if((stat = soLoadBlockInT(0)) != 0) return stat; /* Load the contents of a specific block of the table of inodes into internal storage. Portanto é preciso ir buscar o SOInode, faz-se em baixo*/
@@ -389,7 +389,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 	pToBckInode->group = getgid();
 
 	/*size in bytes*/
-  /* REVIEW: não tenho a certeza que seja assim */
+	/* REVIEW: não tenho a certeza que seja assim */
 	pToBckInode->size = DPC*sizeof(SODirEntry);/*numero maximo de directorios por cluster, o cluster fica formatado a estas entradas, sendo que as duas primeiras ficam em uso*/
 
 	/*size in clusters*/
@@ -402,39 +402,39 @@ static int fillInINT (SOSuperBlock *p_sb)
 	pToBckInode->d[0] = p_sb->dZoneStart;
 
 	/*referencias a clusters a NULL*/
-  int i;
+	int i;
 	for(i = 1; i < N_DIRECT; i++){
 		pToBckInode->d[i] = NULL_CLUSTER;
 	}
 
 	pToBckInode->i1 = NULL_CLUSTER;
 	pToBckInode->i2 = NULL_CLUSTER;
-  
-  /* Store the contents of the block of the table of inodes resident in internal storage to the storage device.*/
-  if((stat=soStoreBlockInT())!=0){
-    return stat;
-  }
+
+	/* Store the contents of the block of the table of inodes resident in internal storage to the storage device.*/
+	if((stat=soStoreBlockInT())!=0){
+		return stat;
+	}
 
 	/* Inicializar os Free iNodes */
-  /* Vamos obter bloco a bloco apartir do bloco 0, temos de ter atenção que existem x inodes por bloco e já vamos usar um inode do bloco 0, esse vamos ter de o passar à frente */
-  int idxBckOfInodes, idxInodesOfBck;
+	/* Vamos obter bloco a bloco apartir do bloco 0, temos de ter atenção que existem x inodes por bloco e já vamos usar um inode do bloco 0, esse vamos ter de o passar à frente */
+	int idxBckOfInodes, idxInodesOfBck;
 	for(idxBckOfInodes = 0; idxBckOfInodes < p_sb->iTableSize; idxBckOfInodes++){
-    /* se estivermos no bloco 0, temos de fazer com que o for apenas comece no inode 1*/
+		/* se estivermos no bloco 0, temos de fazer com que o for apenas comece no inode 1*/
 		if(idxBckOfInodes == 0){
 			idxInodesOfBck = 1;
 		}else{
 			idxInodesOfBck = 0;
 		}
-    
-    /* vamos obter o bloco de inodes (InodesPerBlock, não se esqueçam!!!)*/
-    if((stat = soLoadBlockInT(idxBckOfInodes)) != 0){
-      return stat;
-    }
-    
-    /* obter o bloco de inodes que está armazenado internamente */
-    pToBckInode = soGetBlockInT();
 
-    /* vamos percorrer o bloco de inodes, desde o inicial, 0 ou 1 até ao final (IPB) */
+		/* vamos obter o bloco de inodes (InodesPerBlock, não se esqueçam!!!)*/
+		if((stat = soLoadBlockInT(idxBckOfInodes)) != 0){
+			return stat;
+		}
+
+		/* obter o bloco de inodes que está armazenado internamente */
+		pToBckInode = soGetBlockInT();
+
+		/* vamos percorrer o bloco de inodes, desde o inicial, 0 ou 1 até ao final (IPB) */
 		for(; idxInodesOfBck < IPB; idxInodesOfBck++){
 			pToBckInode[idxInodesOfBck].mode = INODE_FREE;
 			pToBckInode[idxInodesOfBck].refCount = 0;
@@ -453,24 +453,24 @@ static int fillInINT (SOSuperBlock *p_sb)
 
 			/*se estivermos no ultimo iNode da tabela, entao o seguinte é NULL*/
 			if(idxBckOfInodes == p_sb->iTableSize - 1 && idxInodesOfBck == IPB - 1){
-        pToBckInode[idxInodesOfBck].vD1.next = NULL_INODE;
-      }else{
-        /*caso não seja o ultimo então incrementamos 1 no numero do iNode actual*/
-        pToBckInode[idxInodesOfBck].vD1.next = idxInodesOfBck * idxBckOfInodes;
-      }
+				pToBckInode[idxInodesOfBck].vD1.next = NULL_INODE;
+			}else{
+				/*caso não seja o ultimo então incrementamos 1 no numero do iNode actual*/
+				pToBckInode[idxInodesOfBck].vD1.next = idxInodesOfBck * idxBckOfInodes;
+			}
 
 			/* Se estivermos no iNode 1 do primeiro bloco, então o anterior é NULL*/
 			if(idxBckOfInodes == 0 && idxInodesOfBck == 1){
-        pToBckInode[idxInodesOfBck].vD2.prev = NULL_INODE;
-      }else{
-        /*caso não seja o iNode 1 do primeiro bloco, decrementa-se 2 ao next*/
-        pToBckInode[idxInodesOfBck].vD2.prev = pToBckInode[idxInodesOfBck].vD1.next - 2;
-      }
+				pToBckInode[idxInodesOfBck].vD2.prev = NULL_INODE;
+			}else{
+				/*caso não seja o iNode 1 do primeiro bloco, decrementa-se 2 ao next*/
+				pToBckInode[idxInodesOfBck].vD2.prev = pToBckInode[idxInodesOfBck].vD1.next - 2;
+			}
 		}
 
-    if((stat = soStoreBlockInT()) != 0){
-      return stat;
-    }
+		if((stat = soStoreBlockInT()) != 0){
+			return stat;
+		}
 	}
 
 	return 0;
