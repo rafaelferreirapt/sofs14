@@ -360,28 +360,37 @@ static int fillInINT (SOSuperBlock *p_sb)
 {
 
   SOInode* table;
-  int stat, pos,pos2, aux1,error;
-  SODataClust temp;
-  
+  int stat, aux1, aux2, pos, dPos;
 
-  //filling first iNode
+  /*preenchimento do 1º iNode*/
 
-  if((stat = soLoadBlockInT(0)) != 0) return stat;
+  if((stat = soLoadBlockInT(0)) != 0) return stat; /*ler o bloco 0 da tabela de iNode*/
 
-  table = soGetBlockInT();
+  table = soGetBlockInT(); /*obter ponteiro para o bloco, em caso de sucesso*/
+
+  /*definir as permissões de acesso ao owner, group e other*/
   table[0].mode =INODE_FREE | INODE_DIR | INODE_FILE | INODE_SYMLINK | INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP | INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH;  //Marco acresentou os campos todos...
 
+  /*número de directory entries associadas ao iNode, neste caso 2, "." e ".."*/
   table[0].refCount = 2;
-  table[0].owner = getuid(); //ou 0, como é o primeiro? e é zero quando utilizamos o que o prof nos deu.
-  table[0].group = getgid(); //ou 0
 
-  table[0].size =sizeof(temp.info.de);
+  /*obter os id do owner e do group*/
+  table[0].owner = getuid(); 
+  table[0].group = getgid(); 
 
+  /*size in bytes*/
+  table[0].size = DPC*sizeof(SODirEntry);/*numero maximo de directorios por cluster, o cluster fica formatado a estas entradas, sendo que as duas primeiras ficam em uso*/
+
+  /*size in clusters*/
+  table[0].cluCount = 1;
+
+  /*como está ocupado o iNode, então as union vD1 e vD2, ficam reservadas ao tempo.*/
   table[0].vD1.aTime = time(NULL);
   table[0].vD2.mTime = time(NULL);
 
   table[0].d[0] = 0;
 
+  /*referencias a clusters a NULL*/
   for(pos = 1; pos < N_DIRECT; pos++){
     table[0].d[pos] = NULL_CLUSTER;
   }
@@ -389,43 +398,51 @@ static int fillInINT (SOSuperBlock *p_sb)
   table[0].i1 = NULL_CLUSTER;
   table[0].i2 = NULL_CLUSTER;
 
-  //resto dos INodes free
+  /*inicializaçao dos Free iNodes*/
 
-	for(aux1=1;aux1 < p_sb->iTotal;aux1++){
-	  table[aux1].mode=INODE_FREE;	
-	  table[aux1].refCount = 0;
-  	  table[aux1].owner =0;
-  	  table[aux1].group =0;
-	  table[aux1].size =0;
+	for(aux1=0; aux1 < p_sb->iTableSize; aux1++){
+
+    if(aux1 == 0) aux2 = 1;
+    else{
+      if((stat = soLoadBlockInT(aux1)) != 0) return stat;
+      table = soGetBlockInT();
+      aux2 = 0;
+    } 
+  /*configuraçao dos restantes iNodes, tudo NULL e 0*/
+    for(; aux2 < IPB; aux2++){
+      table[aux2].mode = INODE_FREE; 
+      table[aux2].refCount = 0;
+      table[aux2].owner = 0;
+      table[aux2].group = 0;
+      table[aux2].cluCount = 0;
+      table[aux2].size = 0;
+
+  /*inicializar as referecias a cluster a NULL*/
+      for(dPos=0;dPos<N_DIRECT;dPos++){
+
+        table[aux2].d[dPos]=NULL_CLUSTER;
+      } 
+      
+      table[aux2].i1 = NULL_CLUSTER;
+      table[aux2].i2 = NULL_CLUSTER;
+
+      /*se estivermos no ultimo iNode da tabela, entao o seguinte é NULL*/
+      if(aux1 == p_sb->iTableSize - 1 && aux2 == IPB - 1) table[aux2].vD1.next = NULL_INODE;
+      /*caso não seja o ultimo então incrementamos 1 no numero do iNode actual*/
+      else table[aux2].vD1.next = aux1 + 1;
+
+      /*se estivermos no iNode 1 do primeiro bloco, então o anterior é NULL*/
+      if(aux1 == 0 && aux2 == 1) table[aux2].vD2.prev = NULL_INODE;
+      /*caso não seja o iNode 1 do primeiro bloco, decrementa-se 1 no numero do iNode actual*/
+      else table[aux2].vD2.prev = aux1 - 1;
 
 
-	for(pos2=0;pos2<N_DIRECT;pos2++){
+    }
+  }
 
-	table[aux1].d[pos2]=NULL_CLUSTER;
-	}
 
-	
-	table[aux1].i1=NULL_CLUSTER;
-	table[aux1].i2=NULL_CLUSTER;
-
-	
-	if(aux1==1)
-	  table[aux1].vD2.prev=p_sb->iTotal-1;
-	else
-	  table[aux1].vD2.prev=aux1-1;
-
-	if(aux1==p_sb->iTotal-1)
-
-	table[aux1].vD1.next=1;
-	
-	else
-
-	table[aux1].vD1.next=aux1+1;
-}
-
-	
-	if(error=soStoreBlockInt()!=0)
-	return error;
+	if((stat=soStoreBlockInT())!=0)
+	return stat;
 	
 	return 0;
 }
