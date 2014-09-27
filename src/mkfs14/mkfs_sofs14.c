@@ -332,7 +332,7 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   
   /* iNodes */
   p_sb->iTableStart = 1;  /* o superbloco é o bloco 0 */
-  p_sb->iTableSize = (itotal / IPB) + (itotal % IPB); /* nº blocos da tabela de iNodes */
+  p_sb->iTableSize = itotal / IPB; /* nº blocos da tabela de iNodes */
   p_sb->iTotal = itotal;
   p_sb->iFree = itotal - 1; /* o 1º está ocupado com a raiz */
   p_sb->iHead = 1; /* 0 => raiz */
