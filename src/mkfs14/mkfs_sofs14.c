@@ -535,41 +535,46 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 	SODataClust c;	// Criação de um ponteiro para cluster de dados
 	uint32_t i;		// variavel usada para correr a zona de dados
 
-	for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
+	// for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
+	for(i = p_sb->dHead+1; i < p_sb->dZoneTotal-1; i++)
 	{
 
 		if(i == (p_sb->dZoneStart + BLOCKS_PER_CLUSTER)) // O primeiro cluster não possui nenhum antes
 		{
 			c.prev = NULL_CLUSTER;
 			c.next = i+BLOCKS_PER_CLUSTER;
+			c.stat = NULL_INODE;
 
 		}else if (i>(p_sb->dZoneStart + BLOCKS_PER_CLUSTER) && i<(p_sb->dZoneStart + (p_sb->dZoneTotal-1 * BLOCKS_PER_CLUSTER))) // restantes clusters
 		{
 			c.prev = i-BLOCKS_PER_CLUSTER;
 			c.next = i+BLOCKS_PER_CLUSTER;
+			c.stat = NULL_INODE;
 
 		}else                                          // O último cluster não aponta para nada
 		{
 			c.prev = i-BLOCKS_PER_CLUSTER;
 			c.next = NULL_CLUSTER;	
+			c.stat = NULL_INODE;
 		}
 
 		if(soWriteCacheCluster(i,&c) != 0)				// Armazena informação
 		{
-			return soWriteCacheCluster(i,&c);
+			return soWriteCacheCluster(p_sb->dZoneStart + i * BLOCKS_PER_CLUSTER,&c);
 		}
 	}
 
 	/* Zero mode */
 	if (zero)   		// Teste da flag
 	{
-		memset(&c,0x00,BSLPC); // Conteúdo informativo do cluster a zero
+		memset(c.info.data,0x00,BSLPC); // Conteúdo informativo do cluster a zero
 
 		for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
 		{
 			if(soWriteCacheCluster(i,&c) != 0)		 // Armazena informação
 			{
-				return soWriteCacheCluster(i,&c);
+				return soWriteCacheCluster(p_sb->dZoneStart+BLOCKS_PER_CLUSTER*1,&c);
+				// return soWriteCacheCluster(i,&c);
 			}
 		}
 	}
