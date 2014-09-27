@@ -318,7 +318,7 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
 {
   p_sb->magic = 0xFFFF; /*MAGIC_NUMBER;*/
   p_sb->version = VERSION_NUMBER;
-  
+
   /* inserir o nome */
   unsigned int i = 0;
   for( ; name[i]!='\0' && i<PARTITION_NAME_SIZE; i++){
@@ -329,7 +329,7 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   p_sb->nTotal = ntotal;
   p_sb->mStat = PRU; /* formatar => foi bem desmontado */
   /*DÚVIDAS existe algum define para o valor 1? */
-  
+
   /* iNodes */
   p_sb->iTableStart = 1;  /* o superbloco é o bloco 0 */
   p_sb->iTableSize = itotal / IPB; /* nº blocos da tabela de iNodes */
@@ -349,13 +349,13 @@ static int fillInSuperBlock (SOSuperBlock *p_sb, uint32_t ntotal, uint32_t itota
   }
 
 
-  p_sb->dZoneFree = nclusttotal - 1; 
+  p_sb->dZoneFree = nclusttotal - 1;
   p_sb->dZoneRetriev.cacheIdx = DZONE_CACHE_SIZE;
   p_sb->dZoneInsert.cacheIdx = 0;
 
   /* data clusters */
   p_sb->dHead = 1; /* 0 é a raiz, root */
-  p_sb->dTail = nclusttotal - 1; 
+  p_sb->dTail = nclusttotal - 1;
 
   for (i = 0; i < RESERV_AREA_SIZE; ++i){
     p_sb->reserved[i] = 0xee;
@@ -388,8 +388,8 @@ static int fillInINT (SOSuperBlock *p_sb)
   table[0].refCount = 2;
 
   /*obter os id do owner e do group*/
-  table[0].owner = getuid(); 
-  table[0].group = getgid(); 
+  table[0].owner = getuid();
+  table[0].group = getgid();
 
   /*size in bytes*/
   table[0].size = DPC*sizeof(SODirEntry);/*numero maximo de directorios por cluster, o cluster fica formatado a estas entradas, sendo que as duas primeiras ficam em uso*/
@@ -420,10 +420,10 @@ static int fillInINT (SOSuperBlock *p_sb)
       if((stat = soLoadBlockInT(aux1)) != 0) return stat;
       table = soGetBlockInT();
       aux2 = 0;
-    } 
+    }
   /*configuraçao dos restantes iNodes, tudo NULL e 0*/
     for(; aux2 < IPB; aux2++){
-      table[aux2].mode = INODE_FREE; 
+      table[aux2].mode = INODE_FREE;
       table[aux2].refCount = 0;
       table[aux2].owner = 0;
       table[aux2].group = 0;
@@ -434,8 +434,8 @@ static int fillInINT (SOSuperBlock *p_sb)
       for(dPos=0;dPos<N_DIRECT;dPos++){
 
         table[aux2].d[dPos]=NULL_CLUSTER;
-      } 
-      
+      }
+
       table[aux2].i1 = NULL_CLUSTER;
       table[aux2].i2 = NULL_CLUSTER;
 
@@ -456,7 +456,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 
 	if((stat=soStoreBlockInT())!=0)
 	return stat;
-	
+
 	return 0;
 }
 
@@ -486,7 +486,7 @@ static int fillInRootDir (SOSuperBlock *p_sb)
   */
   SODirEntry root1 = {".\0", 0};
   SODirEntry root2 = {"..\0", 0};
-  SODirEntry emptyDir = {"\0", NULL_INODE}; 
+  SODirEntry emptyDir = {"\0", NULL_INODE};
 
   rootCluster.info.de[0] = root1;
   rootCluster.info.de[1] = root2;
@@ -511,9 +511,30 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 {
 
-  /* insert your code here */
+  SODataClust clust;
+  uint32_t i;
+  uint32_t wri;
 
-  return 0;
+  for(i=1; i<p_sb->dzone_total; i++)
+  {
+    if(i==p_sb->dzone_total-1)
+    {
+      clust.next=NULL_CLUSTER;
+
+      if(i==1) clust.prev=NULL_CLUSTER;
+      else clust.prev=i-1;
+
+    }else{
+      clust.next=i+1;
+
+      if(i==1) clust.prev=NULL_CLUSTER;
+      else clust.prev=i-1;
+
+    }
+    clust.stat=NULL_INODE;
+    wri = soWriteCacheCluster (p_sb->dzone_start +i*BLOCKS_PER_CLUSTER, &clust);
+  }
+  return wri;
 }
 
 /*
