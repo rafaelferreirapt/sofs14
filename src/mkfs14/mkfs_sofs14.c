@@ -552,7 +552,7 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 		if(countClu == p_sb->dZoneTotal - 1) c.next = NULL_CLUSTER; //ultimo cluster nao possui nenhum seguinte
 		else c.next = countClu + 1;
 
-		if(stat = (soWriteCacheCluster(i,&c) != 0) != 0)				// Armazena informação
+		if((stat = soWriteCacheCluster(i,&c)) != 0)			// Armazena informação
 		{
 			return stat;
 		}
