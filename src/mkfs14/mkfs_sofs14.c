@@ -378,7 +378,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 	/* Vamos obter bloco a bloco apartir do bloco 0, temos de ter atenção que existem x inodes por bloco e já vamos usar um inode do bloco 0, esse vamos ter de o passar à frente */
 	int idxBckOfInodes, idxInodesOfBck;
 	for(idxBckOfInodes = 0; idxBckOfInodes < p_sb->iTableSize; idxBckOfInodes++){
-		
+
 		/* vamos obter o bloco de inodes (InodesPerBlock, não se esqueçam!!!)*/
 		if((stat = soLoadBlockInT(idxBckOfInodes)) != 0){
 			return stat;
@@ -397,7 +397,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 			pToBckInode[idxInodesOfBck].size = 0;
 
 			pToBckInode[idxInodesOfBck].vD2.prev = idxBckOfInodes * IPB + idxInodesOfBck - 1;
-			
+
 			pToBckInode[idxInodesOfBck].vD1.next = idxBckOfInodes * IPB + idxInodesOfBck + 1;
 
 			/*inicializar as referecias a cluster a NULL*/
@@ -425,7 +425,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 
 	/*definir as permissões de acesso ao owner, group e other*/
 	pToBckInode[0].mode = INODE_RD_USR | INODE_WR_USR | INODE_EX_USR | INODE_RD_GRP | INODE_WR_GRP |
-    INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH | INODE_DIR; 
+		INODE_EX_GRP | INODE_RD_OTH | INODE_WR_OTH | INODE_EX_OTH | INODE_DIR; 
 
 	/*número de directory entries associadas ao iNode, neste caso 2, "." e ".."*/
 	pToBckInode[0].refCount = 2;
@@ -447,9 +447,9 @@ static int fillInINT (SOSuperBlock *p_sb)
 	pToBckInode[1].vD2.prev = NULL_INODE;
 
 	/*
-	d [N_DIRECT]
- 	- direct references to the data clusters that comprise the file information content
- 	*/
+	   d [N_DIRECT]
+	   - direct references to the data clusters that comprise the file information content
+	 */
 	pToBckInode[0].d[0] = 0; /* primeiro data cluster */
 
 	/*referencias a clusters a NULL*/
@@ -467,17 +467,17 @@ static int fillInINT (SOSuperBlock *p_sb)
 
 	/* ultimo bloco */
 	if((stat = soLoadBlockInT(p_sb->iTableSize -1)) != 0){
-      return stat;
+		return stat;
 	}
-    
-    pToBckInode = soGetBlockInT();
-    pToBckInode[IPB-1].vD1.next = NULL_INODE;
-    
-    if((stat = soStoreBlockInT()) != 0){
-      return stat;
-    }
-    
-    return 0;
+
+	pToBckInode = soGetBlockInT();
+	pToBckInode[IPB-1].vD1.next = NULL_INODE;
+
+	if((stat = soStoreBlockInT()) != 0){
+		return stat;
+	}
+
+	return 0;
 }
 
 /*
@@ -511,7 +511,7 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 	rootCluster.info.de[0] = root1;
 	rootCluster.info.de[1] = root2;
 
-	
+
 	int i = 2;
 	for (; i < DPC; ++i){
 		rootCluster.info.de[i] = emptyDir;
@@ -538,22 +538,31 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 	uint32_t i;		// variavel usada para correr a zona de dados
 	int stat, countClu; //contador Clusters
 
- 	
+
 	c.stat = NULL_INODE; //reference to NULL_INODE, pois é para limpar tudo, consultar sofs_datacluster.h struct SODataClust;
 
-	if(zero) memset(c.info.data,0x00,BSLPC); // Conteúdo informativo do cluster a zero
+	// Conteúdo informativo do cluster a zero
+	if(zero){
+		memset(c.info.data,0x00,BSLPC); 
+	}
 
 	//inicialização da lista bi-ligada
 	for(countClu = 1, i = p_sb->dZoneStart + BLOCKS_PER_CLUSTER ; countClu < p_sb->dZoneTotal ; countClu++, i += BLOCKS_PER_CLUSTER){
-	
-		if(countClu == 1) c.prev = NULL_CLUSTER; //primeiro cluster não possui nenhum antes
-		else c.prev = countClu - 1;
 
-		if(countClu == p_sb->dZoneTotal - 1) c.next = NULL_CLUSTER; //ultimo cluster nao possui nenhum seguinte
-		else c.next = countClu + 1;
-
-		if((stat = soWriteCacheCluster(i,&c)) != 0)			// Armazena informação
-		{
+		//primeiro cluster não possui nenhum antes
+		if(countClu == 1){
+			c.prev = NULL_CLUSTER;
+		}else{
+			c.prev = countClu - 1;
+		}
+		//ultimo cluster nao possui nenhum seguinte
+		if(countClu == p_sb->dZoneTotal - 1){
+			c.next = NULL_CLUSTER; 
+		}else{
+			c.next = countClu + 1;
+		}
+		// Armazena informação
+		if((stat = soWriteCacheCluster(i,&c)) != 0){
 			return stat;
 		}
 
