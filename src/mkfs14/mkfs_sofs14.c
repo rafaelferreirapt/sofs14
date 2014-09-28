@@ -397,6 +397,7 @@ static int fillInINT (SOSuperBlock *p_sb)
 			pToBckInode[idxInodesOfBck].size = 0;
 
 			pToBckInode[idxInodesOfBck].vD2.prev = idxBckOfInodes * IPB + idxInodesOfBck - 1;
+			
 			pToBckInode[idxInodesOfBck].vD1.next = idxBckOfInodes * IPB + idxInodesOfBck + 1;
 
 			/*inicializar as referecias a cluster a NULL*/
@@ -510,6 +511,7 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 	rootCluster.info.de[0] = root1;
 	rootCluster.info.de[1] = root2;
 
+	
 	int i = 2;
 	for (; i < DPC; ++i){
 		rootCluster.info.de[i] = emptyDir;
@@ -530,59 +532,37 @@ static int fillInRootDir (SOSuperBlock *p_sb)
 static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 {
 
-	/* Criar a ligação entre clusters (lista ligada) */
+	// Criar a ligação entre clusters (lista ligada) 
 
 	SODataClust c;	// Criação de um ponteiro para cluster de dados
 	uint32_t i;		// variavel usada para correr a zona de dados
+	int stat, countClu; //contador Clusters
 
-	// for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
-	for(i = p_sb->dHead+1; i < p_sb->dZoneTotal-1; i++)
-	{
+ 	
+	c.stat = NULL_INODE; //reference to NULL_INODE, pois é para limpar tudo, consultar sofs_datacluster.h struct SODataClust;
 
-		if(i == (p_sb->dZoneStart + BLOCKS_PER_CLUSTER)) // O primeiro cluster não possui nenhum antes
+	if(zero) memset(c.info.data,0x00,BSLPC); // Conteúdo informativo do cluster a zero
+
+	//inicialização da lista bi-ligada
+	for(countClu = 1, i = p_sb->dZoneStart + BLOCKS_PER_CLUSTER ; countClu < p_sb->dZoneTotal ; countClu++, i += BLOCKS_PER_CLUSTER){
+	
+		if(countClu == 1) c.prev = NULL_CLUSTER; //primeiro cluster não possui nenhum antes
+		else c.prev = countClu - 1;
+
+		if(countClu == p_sb->dZoneTotal - 1) c.next = NULL_CLUSTER; //ultimo cluster nao possui nenhum seguinte
+		else c.next = countClu + 1;
+
+		if(stat = (soWriteCacheCluster(i,&c) != 0) != 0)				// Armazena informação
 		{
-			c.prev = NULL_CLUSTER;
-			c.next = i+BLOCKS_PER_CLUSTER;
-			c.stat = NULL_INODE;
-
-		}else if (i>(p_sb->dZoneStart + BLOCKS_PER_CLUSTER) && i<(p_sb->dZoneStart + (p_sb->dZoneTotal-1 * BLOCKS_PER_CLUSTER))) // restantes clusters
-		{
-			c.prev = i-BLOCKS_PER_CLUSTER;
-			c.next = i+BLOCKS_PER_CLUSTER;
-			c.stat = NULL_INODE;
-
-		}else                                          // O último cluster não aponta para nada
-		{
-			c.prev = i-BLOCKS_PER_CLUSTER;
-			c.next = NULL_CLUSTER;	
-			c.stat = NULL_INODE;
+			return stat;
 		}
 
-		if(soWriteCacheCluster(i,&c) != 0)				// Armazena informação
-		{
-			return soWriteCacheCluster(p_sb->dZoneStart + i * BLOCKS_PER_CLUSTER,&c);
-		}
 	}
-
-	/* Zero mode */
-	if (zero)   		// Teste da flag
-	{
-		memset(c.info.data,0x00,BSLPC); // Conteúdo informativo do cluster a zero
-
-		for(i = (p_sb->dZoneStart + BLOCKS_PER_CLUSTER) ; i < (p_sb->dZoneStart + (p_sb->dZoneTotal * BLOCKS_PER_CLUSTER)) ; i += BLOCKS_PER_CLUSTER)
-		{
-			if(soWriteCacheCluster(i,&c) != 0)		 // Armazena informação
-			{
-				return soWriteCacheCluster(p_sb->dZoneStart+BLOCKS_PER_CLUSTER*1,&c);
-				// return soWriteCacheCluster(i,&c);
-			}
-		}
-	}
-
 
 	return 0;
 
 }
+
 
 /*
    check the consistency of the file system metadata
