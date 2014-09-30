@@ -1,16 +1,19 @@
 CC = gcc
 CFLAGS = -Wall -I "../debugging" -I "../rawIO14" -I "../sofs14"
 
-TARGET = showblock_sofs14
+TARGET = testifuncs14
 
 SUFFIX = $(shell getconf LONG_BIT)
 
+LIBS  = -lsofs14bin_$(SUFFIX)
+LIBS += -lsofs14
+LIBS += -lrawIO14bin_$(SUFFIX)
 LIBS += -lrawIO14
 LIBS += -ldebugging
 
 LFLAGS = -L "../../lib" $(LIBS)
 
-OBJS = sofs_blockviews.o
+OBJS = 
 
 all:		$(TARGET)
 

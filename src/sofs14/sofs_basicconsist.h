@@ -77,6 +77,8 @@
 #define EWGINODENB           528
 /** \brief path is relative and it is not a symbolic link */
 #define ERELPATH             529
+/** \brief data cluster is not allocated */
+#define EDCNALINVAL          530
 
 /**
  *  \brief Get file system magic number.
@@ -104,7 +106,7 @@ extern uint32_t soGetMagicNumber (SOSuperBlock *p_sb);
  *  \return <em>null string</em>, if the pointer to the superblock is \c NULL or the error code is out of range
  */
 
-extern const char *soGetErrorMessage (SOSuperBlock *p_sb, uint32_t code);
+extern const char *soGetErrorMessage (SOSuperBlock *p_sb, int code);
 
 /**
  *  \brief Quick check of the superblock metadata.

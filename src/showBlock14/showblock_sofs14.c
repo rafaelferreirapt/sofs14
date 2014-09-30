@@ -37,7 +37,7 @@
  *           represent the storage device at this abstraction level). Furthermore, a cluster number is the number of
  *           the first block that comprises it.
 
- *  \author João Silva - January 2006
+ *  \author João Pagaime Silva - January 2006
  *  \author Artur Carneiro Pereira - September 2006
  *  \author Miguel Oliveira e Silva - September 2009
  *  \author António Rui Borges - August 2010 - August 2011, September 2014

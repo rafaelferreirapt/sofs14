@@ -1,12 +1,20 @@
 CC = gcc
 CFLAGS = -Wall -I "../debugging"
 
-all:			librawIO14
+LIB_NAME = rawIO14
 
-librawIO14:		sofs_rawdisk.o
-			ar -r librawIO14.a $^
-			cp librawIO14.a ../../lib
-			rm -f $^ librawIO14.a
+TARGET_LIB = lib$(LIB_NAME).a
+
+OBJS = sofs_rawdisk.o
+
+all:			$(TARGET_LIB)
+
+$(TARGET_LIB):		$(OBJS)
+			ar -r $(TARGET_LIB) $^
+			cp $(TARGET_LIB) ../../lib
+			rm -f $^ $(TARGET_LIB)
 
 clean:
-			rm -f ../../lib/librawIO14.a
+			rm -f $(OBJS) $(TARGET_LIB)
+			rm -f ../../lib/$(TARGET_LIB)
+

@@ -1,12 +1,20 @@
 CC = gcc
 CFLAGS = -Wall
 
-all:			libdebugging
+LIB_NAME = debugging
 
-libdebugging:		sofs_probe.o
-			ar -r libdebugging.a $^
-			cp libdebugging.a ../../lib
-			rm -f $^ libdebugging.a
+TARGET_LIB = lib$(LIB_NAME).a
+
+OBJS = sofs_probe.o
+
+all:			$(TARGET_LIB)
+
+$(TARGET_LIB):		$(OBJS)
+			ar -r $(TARGET_LIB) $^
+			cp $(TARGET_LIB) ../../lib
+			rm -f $^ $(TARGET_LIB)
 
 clean:
-			rm -f ../../lib/libdebugging.a
+			rm -f $(OBJS) $(TARGET_LIB)
+			rm -f ../../lib/$(TARGET_LIB)
+
