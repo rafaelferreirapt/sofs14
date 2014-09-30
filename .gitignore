@@ -2,3 +2,4 @@ lib/
 run/
 doc/
 *.c~
+Makefile
