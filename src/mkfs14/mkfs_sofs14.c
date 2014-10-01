@@ -534,7 +534,7 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 
 	// Criar a ligação entre clusters (lista ligada) 
 
-	SODataClust c;	// Criação de um ponteiro para cluster de dados
+	SODataClust c;	// Criação de um cluster de dados
 	uint32_t i;		// variavel usada para correr a zona de dados
 	int stat, countClu; //contador Clusters
 
