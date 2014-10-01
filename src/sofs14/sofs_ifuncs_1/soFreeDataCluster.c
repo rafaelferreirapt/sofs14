@@ -14,11 +14,11 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "sofs_superblock.h"
-#include "sofs_inode.h"
-#include "sofs_datacluster.h"
-#include "sofs_basicoper.h"
-#include "sofs_basicconsist.h"
+#include "../sofs_superblock.h"
+#include "../sofs_inode.h"
+#include "../sofs_datacluster.h"
+#include "../sofs_basicoper.h"
+#include "../sofs_basicconsist.h"
 
 /* Allusion to internal function */
 
@@ -49,9 +49,70 @@ int soDeplete (SOSuperBlock *p_sb);
 
 int soFreeDataCluster (uint32_t nClust)
 {
+  SOSuperBlock* p_sb; //Criação de um ponteiro para o superbloco 
+  uint32_t p_stat; //variavel para estado do cluster de dados
+  int error; //Variavel para verificações de consistência	
+	
   soColorProbe (614, "07;33", "soFreeDataCluster (%"PRIu32")\n", nClust);
 
-  /* insert your code here */
+	//Obter o bloco de superbloco
+	if((error=soLoadSuperBlock())!=0){
+
+		return error;
+
+		}
+	//Ponteiro para superbloco
+	p_sb=soGetSuperBlock();
+	
+	//Verificar se nClust esta dentro da gama!!
+	if((soQCheckStatDC(p_sb,nClust,&p_stat))!=0){ 
+
+		return -EINVAL;
+
+			}
+	//Verificar se o cluster esta ou não alocado... 
+	if(p_stat!=ALLOC_CLT){ 
+
+		return -EDCNALINVAL;
+			}
+
+	// Verificar a consistência do header do cluster de dados
+	if((soQCheckDZ(p_sb))!=0){ 
+
+		return -EDCINVAL;
+			}
+
+		
+	
+	p_sb->dHead=p_sb->dTail=NULL_CLUSTER; //Inicialização do head e tail
+	
+	//the insertion cache is full, deplete it*/
+
+	if(p_sb->dZoneInsert.cacheIdx==DZONE_CACHE_SIZE){
+
+	deplete(p_sb);
+		}	
+		
+	
+	p_sb->dZoneInsert.cache[p_sb->dZoneInsert.cacheIdx]=nClust;		//Um cluster livre é inserido na posição cacheIdx
+	p_sb->dZoneInsert.cacheIdx+=1;			//Incrementa para apontar para a proxima posição onde pode ser inserido um cluster
+	p_sb->dZoneFree+=1;				//Incrementa nº de clusters livres!!
+
+
+		
+
+ 	if((error==soQCheckSuperBlock(p_sb))!=0){ 	//Verificar consistência do superbloco
+
+		return error;
+
+		}
+
+
+	if((error==soStoreSuperBlock())!=0){		//Inserir informação no dispositivo
+
+		return error;
+
+			}
 
   return 0;
 }
