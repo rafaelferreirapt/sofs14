@@ -131,7 +131,7 @@ int soFreeDataCluster (uint32_t nClust)
 
 int soDeplete (SOSuperBlock *p_sb)
 {
-	int cachePos, stat;
+	int cPos, erro;
 	SODataClust dclust;
 	uint32_t NumClu;
 
@@ -180,7 +180,7 @@ int soDeplete (SOSuperBlock *p_sb)
 	/* Coloca-se o dtail a apontar para o último cluster da cache */
 	p_sb->dTail = p_sb->dZoneInsert.cache[DZONE_CACHE_SIZE - 1];
 
-	if(dHead == NULL_CLUSTER) {
+	if(p_sb->dHead == NULL_CLUSTER) {
 	    p_sb->dHead = p_sb->dZoneInsert.cache[0];
 	}
 
