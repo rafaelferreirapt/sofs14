@@ -14,11 +14,11 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "sofs_superblock.h"
-#include "sofs_inode.h"
-#include "sofs_datacluster.h"
-#include "sofs_basicoper.h"
-#include "sofs_basicconsist.h"
+#include "../sofs_superblock.h"
+#include "../sofs_inode.h"
+#include "../sofs_datacluster.h"
+#include "../sofs_basicoper.h"
+#include "../sofs_basicconsist.h"
 /* #define  CLEAN_CLUSTER */
 #ifdef CLEAN_CLUSTER
 #include "sofs_ifuncs_3.h"
@@ -131,12 +131,13 @@ int soReplenish (SOSuperBlock *p_sb)
 	}
 
 	uint32_t nLCluster = p_sb->dHead;
+	SODataClust cluster;		/*invocação de um cluster*/
+	int n;
 
-	for (int n = DZONE_CACHE_SIZE - nctt; n < DZONE_CACHE_SIZE; n++)
+	for (n = DZONE_CACHE_SIZE - nctt; n < DZONE_CACHE_SIZE; n++)
 	{
 		if ( nLCluster == NULL_CLUSTER)
 			break;
-		SODataClust cluster;
 		p_sb->dZoneRetriev.cache[n] = nLCluster;
 		nLCluster =  cluster.next;
 		cluster.prev = cluster.next = NULL_CLUSTER;
@@ -154,7 +155,6 @@ int soReplenish (SOSuperBlock *p_sb)
 
 		for ( ; n < DZONE_CACHE_SIZE; n++)
 		{
-			SODataClust cluster;		/*invocação de um cluster*/
 			p_sb->dZoneRetriev.cache[n] = nLCluster;	/*atribuição do cluster anterior para a cahce de retirada*/
 			nLCluster = cluster.next;	/*nLCluster fica com o cluster actual*/
 			cluster.prev = cluster.next = NULL_CLUSTER;

@@ -13,7 +13,7 @@ OBJS += $(IFUNCS4)
 
 #IFUNCS1  = sofs_ifuncs_1/soAllocInode.o
 #IFUNCS1 += sofs_ifuncs_1/soFreeInode.o
-#IFUNCS1 += sofs_ifuncs_1/soAllocDataCluster.o 
+IFUNCS1 += sofs_ifuncs_1/soAllocDataCluster.o 
 #IFUNCS1 += sofs_ifuncs_1/soFreeDataCluster.o
 
 #IFUNCS2  = sofs_ifuncs_2/soReadInode.o
