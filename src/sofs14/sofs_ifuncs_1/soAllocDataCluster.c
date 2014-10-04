@@ -63,8 +63,42 @@ int soDeplete (SOSuperBlock *p_sb);
 int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 {
    soColorProbe (613, "07;33", "soAllocDataCluster (%"PRIu32", %p)\n", nInode, p_nClust);
-
-  /* insert your code here */
+  
+  if(p_nClust == NULL)
+  {
+	  return -EINVAL;
+  }
+  
+  SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
+  SODataClust cluster;		// Criar um cluster
+  int status;
+  
+  if((status = soLoadSuperBlock()) != 0) 	// Faz o load do SuperBlock para armazenamento interno
+    return status; 
+  
+  p_sb = soGetSuperBlock();				// Adquire o ponteiro para o conteudo do SuperBlock 
+  
+  if((status = soQCheckDZ(p_sb)) != 0)	// Verifica a consistencia da DataZone 
+    return status;
+  
+  if(p_sb->dZoneFree == 0)				// Verifica se existe data clusters livres 
+    return -ENOSPC;
+  
+  if(p_sb->dZoneRetriev.cacheIdx == DZONE_CACHE_SIZE) {	
+    if((status = soReplenish(p_sb)) !=0)					// Cache vazia entao replenish 	
+      return status;
+  }
+  
+  *p_nClust = p_sb->dZoneRetriev.cache[p_sb->dZoneRetriev.cacheIdx];
+  p_sb->dZoneRetriev.cache[p_sb->dZoneRetriev.cacheIdx] = NULL_CLUSTER;
+  p_sb->dZoneRetriev.cacheIdx += 1;
+  p_sb->dZoneFree -= 1;
+  
+  cluster.prev = cluster.next = NULL_CLUSTER;
+  cluster.stat = nInode;
+  
+  if((status=soStoreSuperBlock()) != 0) 
+    return status;
 
   return 0;
 }
