@@ -49,18 +49,18 @@ int soDeplete (SOSuperBlock *p_sb);
 
 int soFreeDataCluster (uint32_t nClust)
 {
-  SOSuperBlock* p_sb; //Criação de um ponteiro para o superbloco
-  uint32_t p_stat; //variavel para estado do cluster de dados
-  int error; //Variavel para verificações de consistência
+	SOSuperBlock* p_sb; //Criação de um ponteiro para o superbloco
+	uint32_t p_stat; //variavel para estado do cluster de dados
+	int error; //Variavel para verificações de consistência
 
-  soColorProbe (614, "07;33", "soFreeDataCluster (%"PRIu32")\n", nClust);
+	soColorProbe (614, "07;33", "soFreeDataCluster (%"PRIu32")\n", nClust);
 
 	//Obter o bloco de superbloco
 	if((error=soLoadSuperBlock())!=0){
 
 		return error;
 
-		}
+	}
 	//Ponteiro para superbloco
 	p_sb=soGetSuperBlock();
 
@@ -69,18 +69,18 @@ int soFreeDataCluster (uint32_t nClust)
 
 		return -EINVAL;
 
-			}
+	}
 	//Verificar se o cluster esta ou não alocado...
 	if(p_stat!=ALLOC_CLT){
 
 		return -EDCNALINVAL;
-			}
+	}
 
 	// Verificar a consistência do header do cluster de dados
 	if((soQCheckDZ(p_sb))!=0){
 
 		return -EDCINVAL;
-			}
+	}
 
 
 
@@ -90,8 +90,8 @@ int soFreeDataCluster (uint32_t nClust)
 
 	if(p_sb->dZoneInsert.cacheIdx==DZONE_CACHE_SIZE){
 
-	deplete(p_sb);
-		}
+		deplete(p_sb);
+	}
 
 
 	p_sb->dZoneInsert.cache[p_sb->dZoneInsert.cacheIdx]=nClust;		//Um cluster livre é inserido na posição cacheIdx
@@ -101,20 +101,20 @@ int soFreeDataCluster (uint32_t nClust)
 
 
 
- 	if((error==soQCheckSuperBlock(p_sb))!=0){ 	//Verificar consistência do superbloco
+	if((error==soQCheckSuperBlock(p_sb))!=0){ 	//Verificar consistência do superbloco
 
 		return error;
 
-		}
+	}
 
 
 	if((error==soStoreSuperBlock())!=0){		//Inserir informação no dispositivo
 
 		return error;
 
-			}
+	}
 
-  return 0;
+	return 0;
 }
 
 /**
@@ -140,53 +140,53 @@ int soDeplete (SOSuperBlock *p_sb)
 		/* Cálculo do physical number do cluster apontado por dtail */
 		NumClu = p_sb->dZoneStart + p_sb->dTail * BLOCKS_PER_CLUSTER;
 
-	    /* Verificação de erros e leitura do cluster */
-        if((erro = soReadCacheCluster(NumClu, &dclust)) != 0) return erro;
+		/* Verificação de erros e leitura do cluster */
+		if((erro = soReadCacheCluster(NumClu, &dclust)) != 0) return erro;
 
-        dclust.next = p_sb->dZoneInsert.cache[0];
+		dclust.next = p_sb->dZoneInsert.cache[0];
 
-        /* Verificação de erros e escrita do cluster */
-        if((erro = soWriteCacheCluster(NumClu, &dclust)) != 0) return erro;
+		/* Verificação de erros e escrita do cluster */
+		if((erro = soWriteCacheCluster(NumClu, &dclust)) != 0) return erro;
 
-    }
+	}
 
 	for(cPos = 0; cPos < DZONE_CACHE_SIZE; cPos++) {
 
 		/* Cálculo do physical number do cluster apontado */
 		NumClu = p_sb->dZoneStart + p_sb->dZoneInsert.cache[cPos] * BLOCKS_PER_CLUSTER;
 
-	  	/* Verificação de erros e leitura do cluster */
-        if((erro = soReadCacheCluster(NumClu, &dclust)) != 0) return erro;
+		/* Verificação de erros e leitura do cluster */
+		if((erro = soReadCacheCluster(NumClu, &dclust)) != 0) return erro;
 
-        if(cPos == 0){
-        	dclust.prev = p_sb->dTail;
-        }
-        else{
-        	dclust.prev = p_sb->dZoneInsert.cache[cPos - 1];
-        }
+		if(cPos == 0){
+			dclust.prev = p_sb->dTail;
+		}
+		else{
+			dclust.prev = p_sb->dZoneInsert.cache[cPos - 1];
+		}
 
-        if(cPos != (DZONE_CACHE_SIZE - 1)){
-        	dclust.next = p_sb->dZoneInsert.cache[cPos + 1];
-        }
+		if(cPos != (DZONE_CACHE_SIZE - 1)){
+			dclust.next = p_sb->dZoneInsert.cache[cPos + 1];
+		}
 
-        else{
-        	dclust.next = NULL_CLUSTER;
-        }
+		else{
+			dclust.next = NULL_CLUSTER;
+		}
 
-	    /* Verificação de erros e escrita do cluster */
-        if((erro = soWriteCacheCluster(NumClu, &dclust)) != 0) return erro;
+		/* Verificação de erros e escrita do cluster */
+		if((erro = soWriteCacheCluster(NumClu, &dclust)) != 0) return erro;
 	}
 
 	/* Coloca-se o dtail a apontar para o último cluster da cache */
 	p_sb->dTail = p_sb->dZoneInsert.cache[DZONE_CACHE_SIZE - 1];
 
 	if(p_sb->dHead == NULL_CLUSTER) {
-	    p_sb->dHead = p_sb->dZoneInsert.cache[0];
+		p_sb->dHead = p_sb->dZoneInsert.cache[0];
 	}
 
 	/* Limpeza da cache de inserção */
 	for(cPos = 0; cPos < DZONE_CACHE_SIZE; cPos++){
-	    p_sb->dZoneInsert.cache[cPos] = NULL_CLUSTER;
+		p_sb->dZoneInsert.cache[cPos] = NULL_CLUSTER;
 	}
 
 	p_sb->dZoneInsert.cacheIdx = 0;

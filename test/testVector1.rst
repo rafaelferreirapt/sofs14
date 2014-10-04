@@ -1,14 +1,14 @@
 Alloc Inode
-[07;31m(611)-->[0m             soAllocInode_bin (2048, 0x7fff10cc57c0)
+[07;31m(611)-->[0m             soAllocInode_bin (2048, 0xbf91b2d4)
 Inode no. 1 alocated.
 Alloc Inode
-[07;31m(611)-->[0m             soAllocInode_bin (1024, 0x7fff10cc57c0)
+[07;31m(611)-->[0m             soAllocInode_bin (1024, 0xbf91b2d4)
 Inode no. 2 alocated.
 Alloc Inode
-[07;31m(611)-->[0m             soAllocInode_bin (512, 0x7fff10cc57c0)
+[07;31m(611)-->[0m             soAllocInode_bin (512, 0xbf91b2d4)
 Inode no. 3 alocated.
 Alloc Inode
-[07;31m(611)-->[0m             soAllocInode_bin (0, 0x7fff10cc57c0)
+[07;31m(611)-->[0m             soAllocInode_bin (0, 0xbf91b2d4)
 soAllocInode: error #22 - Invalid argument
 Free Inode
 [07;31m(612)-->[0m             soFreeInode_bin (15)

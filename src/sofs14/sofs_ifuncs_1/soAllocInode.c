@@ -96,7 +96,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 		return stat;
 	}
 	/* vai ser guardado no p_sb->iHead então temos de atribuir o p_nInode ao iHead */
-   	*p_nInode = p_sb->iHead;
+	*p_nInode = p_sb->iHead;
 
 	SOInode *p_iNode;
 	if((stat = soLoadBlockInT(nBlk))){
@@ -107,9 +107,9 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 	/* EFININVAL, if the free inode is inconsistent */
 	/* Quick check of a free inode. */
 	/* \return <tt>0 (zero)</tt>, on success
- 	 * \return -\c EINVAL, if the pointer is \c NULL
- 	 * \return -\c EFININVAL, if the free inode is inconsistent
- 	 */
+	 * \return -\c EINVAL, if the pointer is \c NULL
+	 * \return -\c EFININVAL, if the free inode is inconsistent
+	 */
 	if((stat = soQCheckFInode(&p_iNode[offset])) != 0){
 		return stat;
 	}
@@ -121,13 +121,13 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 	if(p_iNode[offset].mode != INODE_FREE){
 		/* está no estado dirty mas não sabemos a sua consistência */
 		/* \return -\c EINVAL, if any of the pointers is \c NULL
- 		 *  \return -\c EFDININVAL, if the free inode in the dirty state is inconsistent
- 		 *  \return -\c ELDCININVAL, if the list of data cluster references belonging to an inode is inconsistent
- 		 *  \return -\c EDCINVAL, if the data cluster header is inconsistent
- 		 *  \return -\c EBADF, if the device is not already opened
- 		 *  \return -\c EIO, if it fails on reading or writing
- 		 *  \return -\c ELIBBAD, if the buffercache is inconsistent or the superblock or a data block was not previously loaded on a previous store operation
- 		 */
+		 *  \return -\c EFDININVAL, if the free inode in the dirty state is inconsistent
+		 *  \return -\c ELDCININVAL, if the list of data cluster references belonging to an inode is inconsistent
+		 *  \return -\c EDCINVAL, if the data cluster header is inconsistent
+		 *  \return -\c EBADF, if the device is not already opened
+		 *  \return -\c EIO, if it fails on reading or writing
+		 *  \return -\c ELIBBAD, if the buffercache is inconsistent or the superblock or a data block was not previously loaded on a previous store operation
+		 */
 		if((stat = soQCheckFDInode(p_sb, &p_iNode[offset])) != 0){
 			return stat;
 		}
@@ -151,7 +151,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 	p_iNode[offset].cluCount = 0;
 	p_iNode[offset].vD1.aTime = time(NULL);
 	p_iNode[offset].vD2.mTime = time(NULL);
-	
+
 	int i;
 	for(i=0; i<N_DIRECT; i++){
 		p_iNode[offset].d[i] = NULL_CLUSTER;
@@ -163,7 +163,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 	if((stat = soStoreBlockInT())){
 		return stat;
 	}
-	
+
 	p_sb->iFree--;
 	p_sb->iHead = new_head;
 

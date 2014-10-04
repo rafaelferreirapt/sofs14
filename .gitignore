@@ -4,3 +4,6 @@ doc/
 *.c~
 Makefile
 *.o
+*.rst
+Makefile~
+myDisk

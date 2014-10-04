@@ -49,63 +49,63 @@
 
 int soFreeInode (uint32_t nInode)
 {
-   soColorProbe (612, "07;31", "soFreeInode (%"PRIu32")\n", nInode);
+	soColorProbe (612, "07;31", "soFreeInode (%"PRIu32")\n", nInode);
 
-   SOInode* p_inode;
-   SOSuperBlock* p_sb;
-   uint32_t nBlk, offset;
-   int stat;
+	SOInode* p_inode;
+	SOSuperBlock* p_sb;
+	uint32_t nBlk, offset;
+	int stat;
 
-   /*obter informaçao superbloco*/
-   if((stat = soLoadSuperBlock()) != 0) return stat;
-   p_sb = soGetSuperBlock();
+	/*obter informaçao superbloco*/
+	if((stat = soLoadSuperBlock()) != 0) return stat;
+	p_sb = soGetSuperBlock();
 
-   /*verificar se o iNode não é o 0 que nao pode ser colocado a free, ou se está dentro dos parametros, neste caso se o nInode é menor que o p_sb->iTotal*/
-   if(nInode >= p_sb->iTotal || nInode <= 0) return EINVAL;
+	/*verificar se o iNode não é o 0 que nao pode ser colocado a free, ou se está dentro dos parametros, neste caso se o nInode é menor que o p_sb->iTotal*/
+	if(nInode >= p_sb->iTotal || nInode <= 0) return EINVAL;
 
-   /*leitura do inode a ser libertado*/
+	/*leitura do inode a ser libertado*/
 
-   if((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0) return stat;
-   if((stat = soLoadBlockInT(nBlk)) != 0) return stat;
+	if((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0) return stat;
+	if((stat = soLoadBlockInT(nBlk)) != 0) return stat;
 
-   p_inode = soGetBlockInT();
+	p_inode = soGetBlockInT();
 
-   /*inode deverá estar em uso*/
+	/*inode deverá estar em uso*/
 
-   if((stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0) return stat;
+	if((stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0) return stat;
 
-   p_inode[offset].mode = INODE_FREE;
+	p_inode[offset].mode = INODE_FREE;
 
-   /*se a lista de nos free estiver vazia, entao o prev e next do inode sao null, e este passa a ser o head e tail*/
-   if(p_sb->iFree==0){
-   	p_inode[offset].vD2.prev = p_inode[offset].vD1.next = NULL_INODE;
-   	p_sb->iHead = p_sb->iTail = nInode; 
+	/*se a lista de nos free estiver vazia, entao o prev e next do inode sao null, e este passa a ser o head e tail*/
+	if(p_sb->iFree==0){
+		p_inode[offset].vD2.prev = p_inode[offset].vD1.next = NULL_INODE;
+		p_sb->iHead = p_sb->iTail = nInode; 
 
 
-   }else{				/*caso não esteja livre, então o inode passa a ser o tail, e o seu next é NULL */
-   	p_inode[offset].vD2.prev = p_sb->iTail;
-   	p_inode[offset].vD1.next = NULL_INODE;
-   	p_sb->iTail = nInode;
+	}else{				/*caso não esteja livre, então o inode passa a ser o tail, e o seu next é NULL */
+		p_inode[offset].vD2.prev = p_sb->iTail;
+		p_inode[offset].vD1.next = NULL_INODE;
+		p_sb->iTail = nInode;
 
-   }
+	}
 
-   p_sb->iFree +=1;
+	p_sb->iFree +=1;
 
-   /*armazenar informaçao do bloco que contem o inode*/
-   if((stat = soStoreBlockInT()) != 0) return stat;
+	/*armazenar informaçao do bloco que contem o inode*/
+	if((stat = soStoreBlockInT()) != 0) return stat;
 
-   /*armazenar informaçao do superbloco*/
-   if((stat = soStoreSuperBlock()) != 0) return stat;
+	/*armazenar informaçao do superbloco*/
+	if((stat = soStoreSuperBlock()) != 0) return stat;
 
-   /*para o penultimo inode é necessario colocar o seu next com o novo inode libertado*/
-   if(p_sb->iFree > 1){
-   	if((stat = soConvertRefInT(p_inode[offset].vD2.prev, &nBlk, &offset)) != 0) return stat;
-    if((stat = soLoadBlockInT(nBlk)) != 0) return stat;
+	/*para o penultimo inode é necessario colocar o seu next com o novo inode libertado*/
+	if(p_sb->iFree > 1){
+		if((stat = soConvertRefInT(p_inode[offset].vD2.prev, &nBlk, &offset)) != 0) return stat;
+		if((stat = soLoadBlockInT(nBlk)) != 0) return stat;
 
-   	p_inode = soGetBlockInT();
-   	p_inode[offset].vD1.next = nInode;
+		p_inode = soGetBlockInT();
+		p_inode[offset].vD1.next = nInode;
 
-   	if((stat = soStoreBlockInT()) != 0) return stat;
-   }
-   return 0;
+		if((stat = soStoreBlockInT()) != 0) return stat;
+	}
+	return 0;
 }
