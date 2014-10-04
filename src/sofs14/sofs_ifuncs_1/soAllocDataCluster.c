@@ -14,11 +14,11 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "sofs_superblock.h"
-#include "sofs_inode.h"
-#include "sofs_datacluster.h"
-#include "sofs_basicoper.h"
-#include "sofs_basicconsist.h"
+#include "../sofs_superblock.h"
+#include "../sofs_inode.h"
+#include "../sofs_datacluster.h"
+#include "../sofs_basicoper.h"
+#include "../sofs_basicconsist.h"
 /* #define  CLEAN_CLUSTER */
 #ifdef CLEAN_CLUSTER
 #include "sofs_ifuncs_3.h"
@@ -63,8 +63,42 @@ int soDeplete (SOSuperBlock *p_sb);
 int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 {
    soColorProbe (613, "07;33", "soAllocDataCluster (%"PRIu32", %p)\n", nInode, p_nClust);
-
-  /* insert your code here */
+  
+  if(p_nClust == NULL)
+  {
+	  return -EINVAL;
+  }
+  
+  SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
+  SODataClust cluster;		// Criar um cluster
+  int status;
+  
+  if((status = soLoadSuperBlock()) != 0) 	// Faz o load do SuperBlock para armazenamento interno
+    return status; 
+  
+  p_sb = soGetSuperBlock();				// Adquire o ponteiro para o conteudo do SuperBlock 
+  
+  if((status = soQCheckDZ(p_sb)) != 0)	// Verifica a consistencia da DataZone 
+    return status;
+  
+  if(p_sb->dZoneFree == 0)				// Verifica se existe data clusters livres 
+    return -ENOSPC;
+  
+  if(p_sb->dZoneRetriev.cacheIdx == DZONE_CACHE_SIZE) {	
+    if((status = soReplenish(p_sb)) !=0)					// Cache vazia entao replenish 	
+      return status;
+  }
+  
+  *p_nClust = p_sb->dZoneRetriev.cache[p_sb->dZoneRetriev.cacheIdx];
+  p_sb->dZoneRetriev.cache[p_sb->dZoneRetriev.cacheIdx] = NULL_CLUSTER;
+  p_sb->dZoneRetriev.cacheIdx += 1;
+  p_sb->dZoneFree -= 1;
+  
+  cluster.prev = cluster.next = NULL_CLUSTER;
+  cluster.stat = nInode;
+  
+  if((status=soStoreSuperBlock()) != 0) 
+    return status;
 
   return 0;
 }
@@ -84,7 +118,55 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 int soReplenish (SOSuperBlock *p_sb)
 {
 
-  /* insert your code here */
+  uint32_t nctt;
+
+	if ( p_sb->dZoneFree < DZONE_CACHE_SIZE )
+	{
+		nctt = p_sb->dZoneFree;
+	}
+
+	else
+	{
+		nctt = DZONE_CACHE_SIZE;
+	}
+
+	uint32_t nLCluster = p_sb->dHead;
+	SODataClust cluster;		/*invocação de um cluster*/
+	int n;
+
+	for (n = DZONE_CACHE_SIZE - nctt; n < DZONE_CACHE_SIZE; n++)
+	{
+		if ( nLCluster == NULL_CLUSTER)
+			break;
+		p_sb->dZoneRetriev.cache[n] = nLCluster;
+		nLCluster =  cluster.next;
+		cluster.prev = cluster.next = NULL_CLUSTER;
+	}
+
+	if (n != DZONE_CACHE_SIZE)
+	{
+		p_sb->dHead = p_sb->dTail = NULL_CLUSTER;
+
+		uint32_t result = soDeplete(p_sb);
+		if (result != 0)
+			return result;		/* se nao resultar em sucesso devolver o resultado*/
+
+		nLCluster = p_sb->dHead;
+
+		for ( ; n < DZONE_CACHE_SIZE; n++)
+		{
+			p_sb->dZoneRetriev.cache[n] = nLCluster;	/*atribuição do cluster anterior para a cahce de retirada*/
+			nLCluster = cluster.next;	/*nLCluster fica com o cluster actual*/
+			cluster.prev = cluster.next = NULL_CLUSTER;
+		}
+	}
+
+	if (nLCluster != NULL_CLUSTER)
+		cluster.prev = NULL_CLUSTER;
+	p_sb->dZoneRetriev.cacheIdx = DZONE_CACHE_SIZE - nctt;
+	p_sb->dHead = nLCluster;
+	if (nLCluster == NULL_CLUSTER)
+		p_sb->dTail = NULL_CLUSTER;
 
   return 0;
 }
