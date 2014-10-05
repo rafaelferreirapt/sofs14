@@ -81,7 +81,7 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	if((status = soQCheckDZ(p_sb)) != 0)	// Verifica a consistencia da DataZone 
 		return status;
 
-	if(p_sb->dZoneFree == 0)				// Verifica se existe data clusters livres 
+	if(p_sb->dZoneFree == 0)				// Verifica se existe data clusters livre
 		return -ENOSPC;
 
 	if(p_sb->dZoneRetriev.cacheIdx == DZONE_CACHE_SIZE) {	
@@ -97,9 +97,10 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	cluster.prev = cluster.next = NULL_CLUSTER;
 	cluster.stat = nInode;
 
-	if((status=soStoreSuperBlock()) != 0) 
+	if((status=soStoreSuperBlock()) != 0){ 
 		return status;
-
+	}
+	
 	return 0;
 }
 

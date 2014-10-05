@@ -114,11 +114,10 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 		return stat;
 	}
 
-	int dirty = 0; /* not dirty, is free */
 	/* EFDININVAL, if the free inode in the dirty state is inconsistent */
 	/* primeiro temos de saber se o inode está no estado dirty */
-	/* estar no estado dirty é não estar livre */
-	if(p_iNode[offset].mode != INODE_FREE){
+	/* Quick check of a free inode in the clean state. */
+	if((stat = soQCheckFCInode(&p_iNode[offset])) != 0){
 		/* está no estado dirty mas não sabemos a sua consistência */
 		/* \return -\c EINVAL, if any of the pointers is \c NULL
 		 *  \return -\c EFDININVAL, if the free inode in the dirty state is inconsistent
@@ -127,20 +126,23 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 		 *  \return -\c EBADF, if the device is not already opened
 		 *  \return -\c EIO, if it fails on reading or writing
 		 *  \return -\c ELIBBAD, if the buffercache is inconsistent or the superblock or a data block was not previously loaded on a previous store operation
-		 */
+		 
+		Quick check of a free inode in the dirty state.
+		The contents of all the fields of the inode, except owner, group and size, are checked for consistency. Only legal values are allowed.
+		*/
 		if((stat = soQCheckFDInode(p_sb, &p_iNode[offset])) != 0){
 			return stat;
 		}
-		dirty = 1;
+
+		soCleanInode(&p_iNode[offset]);
+		//if ((stat = soQCheckFCInode(&p_itable[offset])) != 0) {
+            //printf("nao está bem limpo fdx\n");
+            //return stat;
+        //}
 	}
 
 	/* if the inode is free, reference to the next inode in the double-linked list of free inodes */
 	uint32_t new_head = p_iNode[offset].vD1.next;
-
-	/* clean inode dirty */
-	if(dirty){
-		soCleanInode(p_sb->iHead);
-	}
 
 	/* modificar as caracteristicas do inode */
 	p_iNode[offset].mode = type;
