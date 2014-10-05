@@ -90,7 +90,7 @@ int soFreeDataCluster (uint32_t nClust)
 
 	if(p_sb->dZoneInsert.cacheIdx==DZONE_CACHE_SIZE){
 
-		deplete(p_sb);
+		soDeplete(p_sb);
 	}
 
 
