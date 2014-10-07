@@ -67,7 +67,7 @@
 #include "sofs_basicoper.h"
 #include "sofs_basicconsist.h"
 #include "sofs_ifuncs_1.h"
-/* #define  IFUNCS_2 */
+#define  IFUNCS_2
 #ifdef IFUNCS_2
 #include "sofs_ifuncs_2.h"
 #endif
@@ -562,11 +562,11 @@ static void printInode (SOInode *p_inode, uint32_t nInode)
        { temp = p_inode->vD1.aTime;
          ctime_r (&temp, timebuf);
          timebuf[strlen (timebuf) - 1] = '\0';
-         printf ("atime = %s, ", timebuf);
+         fprintf (fl, "atime = %s, ", timebuf);
          temp = p_inode->vD2.mTime;
          ctime_r (&temp, timebuf);
          timebuf[strlen (timebuf) - 1] = '\0';
-         printf ("mtime = %s\n", timebuf);
+         fprintf (fl, "mtime = %s\n", timebuf);
        }
   fprintf (fl, "d[] = {");
   for (i = 0; i < N_DIRECT; i++)

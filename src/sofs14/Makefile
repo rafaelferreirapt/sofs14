@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -I "../debugging" -I "../rawIO14"
+CFLAGS = -Wall -I "../debugging" -I "../rawIO14" -I.
 
 LIB_NAME = sofs14
 
@@ -11,10 +11,10 @@ OBJS += $(IFUNCS2)
 OBJS += $(IFUNCS3) 
 OBJS += $(IFUNCS4) 
 
-IFUNCS1  = sofs_ifuncs_1/soAllocInode.o
-IFUNCS1 += sofs_ifuncs_1/soFreeInode.o
-IFUNCS1 += sofs_ifuncs_1/soAllocDataCluster.o 
-IFUNCS1 += sofs_ifuncs_1/soFreeDataCluster.o
+#IFUNCS1  = sofs_ifuncs_1/soAllocInode.o
+#IFUNCS1 += sofs_ifuncs_1/soFreeInode.o
+#IFUNCS1 += sofs_ifuncs_1/soAllocDataCluster.o 
+#IFUNCS1 += sofs_ifuncs_1/soFreeDataCluster.o
 
 #IFUNCS2  = sofs_ifuncs_2/soReadInode.o
 #IFUNCS2 += sofs_ifuncs_2/soWriteInode.o

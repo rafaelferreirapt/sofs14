@@ -1,12 +1,13 @@
 CC = gcc
-CFLAGS = -Wall -I "../debugging" -I "../rawIO14" -I "../sofs14"
+CFLAGS = -Wall -I "../debugging" -I "../rawIO14" -I "../sofs14" -I.
 
 TARGET = testifuncs14
 
 SUFFIX = $(shell getconf LONG_BIT)
 
-LIBS  = -lsofs14bin_$(SUFFIX)
+LIBS =
 LIBS += -lsofs14
+LIBS += -lsofs14bin_$(SUFFIX)
 LIBS += -lrawIO14bin_$(SUFFIX)
 LIBS += -lrawIO14
 LIBS += -ldebugging

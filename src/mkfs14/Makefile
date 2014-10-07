@@ -1,20 +1,28 @@
 CC = gcc
 CFLAGS = -Wall -I "../debugging" -I "../rawIO14" -I "../sofs14"
-LFLAGS = -L "../../lib"
 
-all32:			mkfs_sofs14_32
+TARGET = mkfs_sofs14
 
-mkfs_sofs14_32:		mkfs_sofs14.o
-			$(CC) $(LFLAGS) -o mkfs_sofs14 $^ -lsofs14bin_32 -lsofs14 -lrawIO14bin_32 -lrawIO14 -ldebugging
-			cp mkfs_sofs14 ../../run
-			rm -f $^ mkfs_sofs14
+SUFFIX = $(shell getconf LONG_BIT)
 
-all64:			mkfs_sofs14_64
+LIBS  = -lsofs14bin_$(SUFFIX)
+LIBS += -lsofs14
+LIBS += -lrawIO14bin_$(SUFFIX)
+LIBS += -lrawIO14
+LIBS += -ldebugging
 
-mkfs_sofs14_64:		mkfs_sofs14.o
-			$(CC) $(LFLAGS) -o mkfs_sofs14 $^ -lsofs14bin_64 -lsofs14 -lrawIO14bin_64 -lrawIO14 -ldebugging
-			cp mkfs_sofs14 ../../run
-			rm -f $^ mkfs_sofs14
+LFLAGS = -L "../../lib" $(LIBS)
+
+OBJS = 
+
+all:		$(TARGET)
+
+$(TARGET):	$(TARGET).o $(OBJS)
+			$(CC) -o $@ $^ $(LFLAGS)
+			cp $@ ../../run
+			rm -f $^ $@
 
 clean:
-			rm -f ../../run/mkfs_sofs14
+			rm -f $(TARGET) $(TARGET).o $(OBJS)
+			rm -f ../../run/$(TARGET)
+
