@@ -72,6 +72,7 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
 	SODataClust cluster;		// Criar um cluster
 	int status;
+	uint32_t pAddress;
 
 	if((status = soLoadSuperBlock()) != 0) 	// Faz o load do SuperBlock para armazenamento interno
 		return status; 
@@ -97,9 +98,15 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	cluster.prev = cluster.next = NULL_CLUSTER;
 	cluster.stat = nInode;
 
+	pAddress = p_sb->dZoneStart+(*p_nClust)*BLOCKS_PER_CLUSTER;
+	
+	if((status = soWriteCacheCluster(pAddress,&cluster)) != 0)	// Escrita no cluster
+		return status;
+	
 	if((status=soStoreSuperBlock()) != 0){ 
 		return status;
 	}
+	
 	
 	return 0;
 }
