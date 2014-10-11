@@ -59,7 +59,96 @@ int soCleanInode (uint32_t nInode)
 {
   soColorProbe (513, "07;31", "soCleanInode (%"PRIu32")\n", nInode);
 
-  /* insert your code here */
+  SOSuperBlock* p_sb;
+  SOInode* p_inode;
+  SODataClust c; //Ponteiro para a zona de dados
+  int stat;
+  uint32_t nBlk,offset;
+  
+  //Obter informação so SuperBloco
+  if((stat=soLoadSuperBlock())!=0){
+  return stat;
+		}
+		
+	p_sb=soGetSuperBlock(); //Ponteiro para superbloco
+		
+		//Verificar se nInode é valido
+	if(nInode >= p_sb->iTotal || nInode <= 0){
+	
+		return -EINVAL;
+		}
+		
+	if((stat=soConvertRefInT(nInode,&nBlk,&offset))!=0){
+
+			return stat;
+	} 	
+	//Obter informação da tabela de Inodes	
+	if((stat=soLoadBlockInT(&nBlk))!=0){
+	return stat;
+	}
+	
+	
+	p_inode=soGetBlockInT(); //Ponteiro para tabela de Inodes
+	
+	//Return -EFDININVAL Se o inode livre no estado sujo for inconsistente
+	if((soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
+		return -EFDININVAL;
+		}
+		
+		
+		
+		
+	//Return -ELDCININVAL Se a lista de clusters livres pertencentes a um Inode é inconsistente
+	if((soQCheckInodeIU(p_sb,&p_inode[offset]))!=0){
+		return -ELDCININVAL;
+		}
+		
+	//Return -EDCINVAL se header é inconsistente
+	
+	if((soQCheckInodeIU(p_sb,&p_inode[offset]))!=0){
+	
+		return -EDCINVAL;
+		}
+		//if the <em>inode number</em> in the data cluster <tt>status</tt> field is different from the provided <em>inode number</em> (FREE AND CLEAN / CLEAN)
+	if(c.stat != nInode){
+	
+		return -EWGINODENB;
+		}
+		
+			p_inode[offset].refCount=0;
+			p_inode[offset].owner=0;
+			p_inode[offset].group=0;
+			p_inode[offset].size=0;
+			p_inode[offset].cluCount=0;
+			p_inode[offset].vD1.aTime=0;
+			p_inode[offset].vD2.mTime=0;
+			
+		int i;
+		for(i=0; i<N_DIRECT; i++){
+		p_inode[offset].d[i] = NULL_CLUSTER;
+		}
+
+		p_inode[offset].i1 = NULL_CLUSTER;
+		p_inode[offset].i2 = NULL_CLUSTER;
+		
+			if((stat = soStoreBlockInT()) != 0){ //Inserir informação da tabela de Inodes no dispositivo
+			
+			return stat;
+			
+			}
+	
+		if((stat=soQCheckSuperBlock(p_sb))!=0){ //Verificar consistência do superbloco
+
+		return stat;
+
+	}
+
+
+	if((stat=soStoreSuperBlock())!=0){ //Inserir informação no dispositivo
+
+		return stat;
+
+	}
 
   return -ENOSYS;
 }
