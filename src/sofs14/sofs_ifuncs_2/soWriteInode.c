@@ -48,51 +48,51 @@
 
 int soWriteInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 {
-  soColorProbe (512, "07;31", "soWriteInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
+	soColorProbe (512, "07;31", "soWriteInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
 
-  int status_error;			// Variavel usada para o returno de erros
-  SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
-  
-  if((status_error=soLoadSuperBlock())!=0) 	// Tenta fazer o load do SuperBlock 
-    return status_error;
-  p_sb=soGetSuperBlock();				// Adquire o ponteiro para o SuperBlock 
-  
-  if ((status_error= soQCheckSuperBlock(p_sb)) != 0)  // Verifica a consistência do SuperBlock
-      return status_error;
-   
-   if (nInode < 0 || nInode > p_sb->iTotal || p_inode == NULL || (status != IUIN && status != FDIN))
-			// Validação de conformidade:
-      // o número do nó-i tem que ser um valor válido;
-      // o ponteiro para a região de armazenamento do nó-i a ser lido não pode ser nulo.
-      // o status de escrita tem que ser válido (nó-i em uso ou nó-i livre no estado sujo); 
-      return -EINVAL;
+	int status_error;			// Variavel usada para o returno de erros
+	SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
 
-      
-   uint32_t nBlk;             // Usado para obter o numero de blocos
-   uint32_t offset;           // Usado para obter o offset o inode
-   SOInode *inode;           // Ponteiro para o inode
-   
-   if ((status_error = soConvertRefInT(nInode, &nBlk, &offset)) != 0)   // 
-      return status_error;												//
-   if ((status_error = soLoadBlockInT(nBlk)) != 0 )        				// Adquiro o ponteiro para o inode a ser escrito
-      return status_error;												//
-   inode = soGetBlockInT();   											//
-   
-   if (status == IUIN) {      // Se o nó-i está em uso...
-      if ((status_error = soQCheckInodeIU(p_sb, p_inode)) != 0)     // Verifica a consistência do inode usado
-         return status_error;
-      inode[offset].vD1.aTime = time(NULL);       
-      inode[offset].vD2.mTime = time(NULL);
-     // Actualização do tempo do último acesso e do tempo da última modificação (apenas quando se trata de um nó-i em uso!!!)
+	if((status_error=soLoadSuperBlock())!=0) 	// Tenta fazer o load do SuperBlock 
+		return status_error;
+	p_sb=soGetSuperBlock();				// Adquire o ponteiro para o SuperBlock 
 
-   } else if (status == FDIN) {   // Se o nó-i está no estado sujo...
-      if ((status_error = soQCheckFDInode(p_sb, p_inode)) != 0)    // Verifica a consistência dos "inodes sujos"
-         return status_error;
-   }
-   
-   inode[offset] = *p_inode;       // Escrita no inode
-   if ((status_error = soStoreBlockInT()) != 0)    // Store da informação
-      return status_error;
+	if ((status_error= soQCheckSuperBlock(p_sb)) != 0)  // Verifica a consistência do SuperBlock
+		return status_error;
 
-  return -ENOSYS;
+	if (nInode < 0 || nInode > p_sb->iTotal || p_inode == NULL || (status != IUIN && status != FDIN))
+		// Validação de conformidade:
+		// o número do nó-i tem que ser um valor válido;
+		// o ponteiro para a região de armazenamento do nó-i a ser lido não pode ser nulo.
+		// o status de escrita tem que ser válido (nó-i em uso ou nó-i livre no estado sujo); 
+		return -EINVAL;
+
+
+	uint32_t nBlk;             // Usado para obter o numero de blocos
+	uint32_t offset;           // Usado para obter o offset o inode
+	SOInode *inode;           // Ponteiro para o inode
+
+	if ((status_error = soConvertRefInT(nInode, &nBlk, &offset)) != 0)   // 
+		return status_error;												//
+	if ((status_error = soLoadBlockInT(nBlk)) != 0 )        				// Adquiro o ponteiro para o inode a ser escrito
+		return status_error;												//
+	inode = soGetBlockInT();   											//
+
+	if (status == IUIN) {      // Se o nó-i está em uso...
+		if ((status_error = soQCheckInodeIU(p_sb, p_inode)) != 0)     // Verifica a consistência do inode usado
+			return status_error;
+		inode[offset].vD1.aTime = time(NULL);       
+		inode[offset].vD2.mTime = time(NULL);
+		// Actualização do tempo do último acesso e do tempo da última modificação (apenas quando se trata de um nó-i em uso!!!)
+
+	} else if (status == FDIN) {   // Se o nó-i está no estado sujo...
+		if ((status_error = soQCheckFDInode(p_sb, p_inode)) != 0)    // Verifica a consistência dos "inodes sujos"
+			return status_error;
+	}
+
+	inode[offset] = *p_inode;       // Escrita no inode
+	if ((status_error = soStoreBlockInT()) != 0)    // Store da informação
+		return status_error;
+
+	return -ENOSYS;
 }

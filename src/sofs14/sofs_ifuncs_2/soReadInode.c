@@ -52,51 +52,51 @@
 
 int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 {
-  soColorProbe (511, "07;31", "soReadInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
-	
-	uint32_t nBlk, offset;
-  int stat;
-  SOSuperBlock *p_sb;
+	soColorProbe (511, "07;31", "soReadInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
 
-  if((stat = soLoadSuperBlock()) != 0)
+	uint32_t nBlk, offset;
+	int stat;
+	SOSuperBlock *p_sb;
+
+	if((stat = soLoadSuperBlock()) != 0)
 		return stat;
-	
+
 	p_sb = soGetSuperBlock();
 
-	  /*obtençao do numero do bloco e respectivo offset para o nInode pretendido*/
-  if ((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0)
-  	return stat;
+	/*obtençao do numero do bloco e respectivo offset para o nInode pretendido*/
+	if ((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0)
+		return stat;
 
-  /*copia do bloco que contem o iNode para a area de armazenamento interno*/
-  if((stat = soLoadBlockInT(nBlk)) != 0)
-  	return stat;
-  /*ponteiro para a area de armazenamento interno*/
-  p_inode = soGetBlockInT();
+	/*copia do bloco que contem o iNode para a area de armazenamento interno*/
+	if((stat = soLoadBlockInT(nBlk)) != 0)
+		return stat;
+	/*ponteiro para a area de armazenamento interno*/
+	p_inode = soGetBlockInT();
 
-  /* verifica se o inode esta em uso
-  testes de consistencia sao realizados pelas duas proximas funçoes
-  garantindo a consistencia desta funçao em si */
-  if(( stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0)
-  {
-  	return stat;
-  }
+	/* verifica se o inode esta em uso
+	   testes de consistencia sao realizados pelas duas proximas funçoes
+	   garantindo a consistencia desta funçao em si */
+	if(( stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0)
+	{
+		return stat;
+	}
 
-  else
-  {
-  	status = IUIN;
-  }
+	else
+	{
+		status = IUIN;
+	}
 
-  if ( (stat = soQCheckFDInode(p_sb, &p_inode[offset])) != 0)
-  {
-    return stat;
-  }
-  else
-  {
-    status = FDIN;
-  }
-  /* se inode passar nos testes, actualizar tempo de acesso */;
-  p_inode[offset].vD1.aTime = time(NULL);
-  /* insert your code here */
+	if ( (stat = soQCheckFDInode(p_sb, &p_inode[offset])) != 0)
+	{
+		return stat;
+	}
+	else
+	{
+		status = FDIN;
+	}
+	/* se inode passar nos testes, actualizar tempo de acesso */;
+	p_inode[offset].vD1.aTime = time(NULL);
+	/* insert your code here */
 
-  return 0;
+	return 0;
 }
