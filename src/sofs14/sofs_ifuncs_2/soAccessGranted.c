@@ -64,7 +64,119 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 {
   soColorProbe (514, "07;31", "soAccessGranted (%"PRIu32", %"PRIu32")\n", nInode, opRequested);
 
-  /* insert your code here */
+  uint32_t block;
+  uint32_t offset;
+  uint16_t validType;
+  SOSuperBlock *p_sosb;
+  int error;
 
-  return -ENOSYS;
+  /*Load superblock*/
+  if((error=soLoadSuperBlock()) != 0 ){
+     return error;
+  }
+
+  p_sosb=soGetSuperBlock();
+
+  /*Validaçao de conformidade*/
+  if(nInode >= p_sosb->iTotal){    /*o número do nó-i tem que ser um valor válido*/
+     return -EINVAL;
+  }
+
+  if(opRequested > (R | W | X)){  /*a operação solicitada, ou a combinação de operações solicitadas, têm que pertencer à classe predefinida.*/
+    return -EINVAL;
+  }
+
+  /*Validação de consistencia*/
+
+  if((error = soConvertRefInT(nInode, &block, &offset)) != 0){
+    return error;
+  }
+  if((error = soLoadBlockInT(block)) != 0){
+    return error;
+  }
+
+  SOInode *p_ind = soGetBlockInT();
+
+  p_ind += offset;
+
+  uint32_t owner = p_ind->owner;      /*user ID of the file owner */
+  uint32_t group = p_ind->group;      /*group ID of the file owner */
+  uint16_t mode = p_ind->mode;        /* file type (either a regular file, a directory or a symbolic link) and access permissions*/
+
+
+  validType = mode & INODE_TYPE_MASK; /*Verificar se o no-i esta associado a um tipo valido(ficheiro, diretorio, atalho)*/
+
+  if(validType != INODE_DIR
+    && validType != INODE_FILE
+    && validType != INODE_SYMLINK){
+      return -EIUININVAL;
+  }
+
+  if(getuid()==0)				//Para o root, R e W são sempre permitidos
+  {
+    if(opRequested==X)		//Mas X só é permitido, se em group, own ou other for permitido
+    {
+      if((((mode & INODE_EX_USR) == INODE_EX_USR)
+        | ((mode & INODE_EX_GRP) == INODE_EX_GRP)
+        | ((mode & INODE_EX_OTH) == INODE_EX_OTH)) != true){
+          return -EACCES;
+      }
+    }
+  }
+  else if(getuid()!=0){   //Para quando não é o root
+    if(getuid()==owner){
+      if (opRequested & R){			// R - read permission
+        if ((mode & INODE_RD_USR)!=INODE_RD_USR){
+          return -EACCES;
+        }
+      }
+      if (opRequested & W){			// W - write permission
+        if ((mode & INODE_WR_USR)!=INODE_WR_USR){
+          return -EACCES;
+        }
+      }
+      if (opRequested & X){		// X - execution permission
+        if ((mode & INODE_EX_USR)!=INODE_EX_USR){
+          return -EACCES;
+        }
+      }
+    }
+
+    else if(getgid()==group){
+      if (opRequested & R){			// R - read permission
+        if ((mode & INODE_RD_GRP)!=INODE_RD_GRP){
+          return -EACCES;
+        }
+      }
+      if (opRequested & W){			// W - write permission
+        if ((mode & INODE_WR_GRP)!=INODE_WR_GRP){
+          return -EACCES;
+        }
+      }
+      if (opRequested & X){		// X - execution permission
+        if ((mode & INODE_EX_GRP)!=INODE_EX_GRP){
+          return -EACCES;
+        }
+      }
+    }
+
+    else if(getuid()!=owner && getgid()!=group){
+      if (opRequested & R){			// R - read permission
+        if ((mode & INODE_RD_OTH)!=INODE_RD_OTH){
+          return -EACCES;
+        }
+      }
+      if (opRequested & W){			// W - write permission
+        if ((mode & INODE_WR_OTH)!=INODE_WR_OTH){
+          return -EACCES;
+        }
+      }
+      if (opRequested & X){		// X - execution permission
+        if ((mode & INODE_EX_OTH)!=INODE_EX_OTH){
+          return -EACCES;
+        }
+      }
+    }
+  }
+  return 0;
 }
