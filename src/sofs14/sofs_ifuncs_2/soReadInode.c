@@ -50,53 +50,58 @@
  *  \return -<em>other specific error</em> issued by \e lseek system call
  */
 
-int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
-{
+int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 	soColorProbe (511, "07;31", "soReadInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
+
+	/* verificar se o ponteiro que aponta para o buffer onde os dados do inode devem ser lidos não é nulo e se o status está em uso ou free in dirty state */
+  	if(p_inode == NULL || (status != IUIN && status != FDIN)){
+    	return -EINVAL;
+  	} 
 
 	uint32_t nBlk, offset;
 	int stat;
 	SOSuperBlock *p_sb;
 
-	if((stat = soLoadSuperBlock()) != 0)
+	if((stat = soLoadSuperBlock()) != 0){
 		return stat;
+	}
 
 	p_sb = soGetSuperBlock();
 
+  	/* nº do inode que deve ser lido */
+  	if(nInode < 0 || nInode >= p_sb->iTotal){
+    	return -EINVAL;
+  	}
+
 	/*obtençao do numero do bloco e respectivo offset para o nInode pretendido*/
-	if ((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0)
+	if ((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0){
 		return stat;
+	}
 
 	/*copia do bloco que contem o iNode para a area de armazenamento interno*/
-	if((stat = soLoadBlockInT(nBlk)) != 0)
+	if((stat = soLoadBlockInT(nBlk)) != 0){
 		return stat;
+	}
 	/*ponteiro para a area de armazenamento interno*/
 	p_inode = soGetBlockInT();
 
-	/* verifica se o inode esta em uso
-	   testes de consistencia sao realizados pelas duas proximas funçoes
-	   garantindo a consistencia desta funçao em si */
-	if(( stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0)
-	{
-		return stat;
-	}
+	
+	if(status == IUIN){
+		if((stat = soQCheckInodeIU(p_sb, &p_inode[offset]))){
+			return stat;
+		}
+		p_inode[offset].vD1.aTime = time(NULL);
 
-	else
-	{
-		status = IUIN;
+	    if((stat = soStoreBlockInT()) != 0){
+	     	return stat;
+	    }
+	}else if(status == FDIN){
+		if((stat = soQCheckFDInode(p_sb, &p_inode[offset]))){
+			return stat;
+		}
 	}
-
-	if ( (stat = soQCheckFDInode(p_sb, &p_inode[offset])) != 0)
-	{
-		return stat;
-	}
-	else
-	{
-		status = FDIN;
-	}
-	/* se inode passar nos testes, actualizar tempo de acesso */;
-	p_inode[offset].vD1.aTime = time(NULL);
-	/* insert your code here */
+	
+	memcpy(p_inode, &p_inode[offset], sizeof(SOInode));  	
 
 	return 0;
 }
