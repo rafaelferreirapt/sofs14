@@ -60,6 +60,7 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 
 	uint32_t nBlk, offset;
 	int stat;
+	SOInode *p_tmp_inode;
 	SOSuperBlock *p_sb;
 
 	if((stat = soLoadSuperBlock()) != 0){
@@ -67,6 +68,10 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 	}
 
 	p_sb = soGetSuperBlock();
+
+	if((stat = soQCheckSuperBlock(p_sb)) != 0){
+		return stat;
+	}
 
   	/* nº do inode que deve ser lido */
   	if(nInode < 0 || nInode >= p_sb->iTotal){
@@ -83,25 +88,25 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 		return stat;
 	}
 	/*ponteiro para a area de armazenamento interno*/
-	p_inode = soGetBlockInT();
+	p_tmp_inode = soGetBlockInT();
 
 	
 	if(status == IUIN){
-		if((stat = soQCheckInodeIU(p_sb, &p_inode[offset]))){
+		if((stat = soQCheckInodeIU(p_sb, &p_tmp_inode[offset]))){
 			return stat;
 		}
-		p_inode[offset].vD1.aTime = time(NULL);
+		p_tmp_inode[offset].vD1.aTime = time(NULL);
 
 	    if((stat = soStoreBlockInT()) != 0){
 	     	return stat;
 	    }
 	}else if(status == FDIN){
-		if((stat = soQCheckFDInode(p_sb, &p_inode[offset]))){
+		if((stat = soQCheckFDInode(p_sb, &p_tmp_inode[offset]))){
 			return stat;
 		}
 	}
 	
-	memcpy(p_inode, &p_inode[offset], sizeof(SOInode));  	
+	memcpy(p_inode, &p_tmp_inode[offset], sizeof(SOInode));  	
 
 	return 0;
 }
