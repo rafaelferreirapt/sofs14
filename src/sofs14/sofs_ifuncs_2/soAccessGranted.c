@@ -97,7 +97,7 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 
   SOInode *p_ind = soGetBlockInT();
 
-  if ((soQCheckInodeIU(p_sosb, &p_ind[offset]))) return -ELIBBAD;
+  if ((soQCheckInodeIU(p_sosb, &p_ind[offset]))) return -EIUININVAL;
 
   if(p_ind[offset].mode & INODE_FREE) return -EIUININVAL; /*verifica a consistÊncia, se um iNode está a free, depois de se dizer que está em uso*/
 
