@@ -90,18 +90,7 @@ int soCleanInode (uint32_t nInode)
 		return stat;
 	}
 
-	p_inode[offset].mode = INODE_FREE;
-	p_inode[offset].refCount=0;
-	p_inode[offset].size=0;
-	p_inode[offset].cluCount=0;
-
-	int i;
-	for(i=0; i<N_DIRECT; i++){
-		p_inode[offset].d[i] = NULL_CLUSTER;
-	}
-
-	p_inode[offset].i1 = NULL_CLUSTER;
-	p_inode[offset].i2 = NULL_CLUSTER;
+	soReadInode(p_inode,nInode,stat);
 
 	if((stat = soStoreBlockInT()) != 0){ //Inserir informação da tabela de Inodes no dispositivo
 		return stat;
