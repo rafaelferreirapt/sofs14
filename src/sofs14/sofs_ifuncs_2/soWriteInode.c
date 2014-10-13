@@ -50,20 +50,25 @@ int soWriteInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 {
 	soColorProbe (512, "07;31", "soWriteInode (%p, %"PRIu32", %"PRIu32")\n", p_inode, nInode, status);
 
-	int status_error;		// Variavel usada para o returno de erros
+	int stat;		// Variavel usada para o returno de erros
 	SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
 
 	// Tenta fazer o load do SuperBlock
-	if((status_error = soLoadSuperBlock()) != 0){
-		return status_error;
+	if((stat = soLoadSuperBlock()) != 0){
+		return stat;
 	}
 	// Adquire o ponteiro para o SuperBlock
 	p_sb=soGetSuperBlock(); 
 
 	// Verifica a consistência do SuperBlock
-	if((status_error = soQCheckSuperBlock(p_sb)) != 0){
-		return status_error;
+	if((stat = soQCheckSuperBlock(p_sb)) != 0){
+		return stat;
 	}
+
+	//Verifica a consitência da tabela de nós-i
+    if((stat = soQCheckInT(p_sb)) != 0){
+    	return stat;
+    }
 
 	// Validação de conformidade:
 	// o número do nó-i tem que ser um valor válido;
@@ -78,20 +83,20 @@ int soWriteInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 	uint32_t offset;           // Usado para obter o offset o inode
 	SOInode *p_to_inode;      // Ponteiro para o inode onde vamos escrever
 
-	if((status_error = soConvertRefInT(nInode, &nBlk, &offset)) != 0 ){ 
-		return status_error;
+	if((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0 ){ 
+		return stat;
 	}
 
-	if((status_error = soLoadBlockInT(nBlk)) != 0 ){
-		return status_error;
+	if((stat = soLoadBlockInT(nBlk)) != 0 ){
+		return stat;
 	}
 
 	p_to_inode = soGetBlockInT();
 
 	if(status == IUIN){      // Se o nó-i está em uso...
 		// Verifica a consistência do inode usado
-		if ((status_error = soQCheckInodeIU(p_sb, p_inode)) != 0){
-			return status_error;
+		if ((stat = soQCheckInodeIU(p_sb, p_inode)) != 0){
+			return stat;
 		}
 		p_inode->vD1.aTime = time(NULL);       
 		p_inode->vD2.mTime = time(NULL);
@@ -99,17 +104,21 @@ int soWriteInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 
 	}else if(status == FDIN){   // Se o nó-i está no estado sujo...
 		// Verifica a consistência dos "inodes sujos"
-		if ((status_error = soQCheckFDInode(p_sb, p_inode)) != 0){
-			return status_error;
+		if ((stat = soQCheckFDInode(p_sb, p_inode)) != 0){
+			return stat;
 		}
 	}
 
 	memmove(&p_to_inode[offset], p_inode, sizeof(SOInode));
 
 	// Store da informação
-	if ((status_error = soStoreBlockInT()) != 0){
-		return status_error;
+	if ((stat = soStoreBlockInT()) != 0){
+		return stat;
 	}
 
+	if((stat = soStoreSuperBlock()) != 0){
+		return stat;
+	}
+	
 	return 0;
 }
