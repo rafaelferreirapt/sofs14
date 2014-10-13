@@ -544,6 +544,14 @@ static int fillInGenRep (SOSuperBlock *p_sb, int zero)
 	// Conteúdo informativo do cluster a zero
 	if(zero){
 		memset(c.info.data,0x00,BSLPC); 
+		
+		for(i = p_sb->dZoneStart + BLOCKS_PER_CLUSTER ; i < p_sb->dZoneTotal ; i += BLOCKS_PER_CLUSTER)
+		{
+			// Armazena informação
+			if((stat = soWriteCacheCluster(i,&c)) != 0){
+			return stat;
+			}
+		}
 	}
 
 	//inicialização da lista bi-ligada
