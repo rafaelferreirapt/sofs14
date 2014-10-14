@@ -73,10 +73,19 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 		return stat;
 	}
 
+	//Verifica a consitência da tabela de nós-i
+    if((stat = soQCheckInT(p_sb)) != 0){
+    	return stat;
+    }
+
   	/* nº do inode que deve ser lido */
   	if(nInode < 0 || nInode >= p_sb->iTotal){
     	return -EINVAL;
   	}
+
+  	if(nInode < 0 || nInode > p_sb->iTotal || p_inode == NULL || (status != IUIN && status != FDIN)){
+		return -EINVAL;
+	}
 
 	/*obtençao do numero do bloco e respectivo offset para o nInode pretendido*/
 	if ((stat = soConvertRefInT(nInode, &nBlk, &offset)) != 0){
@@ -97,9 +106,6 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 		}
 		p_tmp_inode[offset].vD1.aTime = time(NULL);
 
-	    if((stat = soStoreBlockInT()) != 0){
-	     	return stat;
-	    }
 	}else if(status == FDIN){
 		if((stat = soQCheckFDInode(p_sb, &p_tmp_inode[offset]))){
 			return stat;
@@ -107,6 +113,14 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 	}
 	
 	memcpy(p_inode, &p_tmp_inode[offset], sizeof(SOInode));  	
+
+	if((stat = soStoreBlockInT()) != 0){
+	 	return stat;
+	}
+
+	if((stat = soStoreSuperBlock()) != 0){
+    	return stat;
+	}
 
 	return 0;
 }
