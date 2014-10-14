@@ -90,7 +90,7 @@ int soCleanInode (uint32_t nInode)
 		return stat;
 	}
 
-	if ((stat = soHandleFileClusters(nInode, 0, CLEAN)) != 0){
+	if((stat = soHandleFileClusters(nInode, 0, CLEAN)) != 0){
  		return stat;
 	}
 
