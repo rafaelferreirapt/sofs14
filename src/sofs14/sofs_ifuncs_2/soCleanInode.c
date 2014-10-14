@@ -90,7 +90,10 @@ int soCleanInode (uint32_t nInode)
 		return stat;
 	}
 
-	soReadInode(p_inode,nInode,stat);
+	if ((stat = soHandleFileClusters(nInode, 0, CLEAN)) != 0){
+ 		return stat;
+	}
+
 
 	if((stat = soStoreBlockInT()) != 0){ //Inserir informação da tabela de Inodes no dispositivo
 		return stat;

@@ -181,5 +181,9 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
   if((stat = soStoreBlockInT()) != 0){
     return stat;
   }
+
+  if((stat = soStoreSuperBlock()) != 0){
+    return stat;
+  }
   return 0;
 }
