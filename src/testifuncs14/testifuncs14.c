@@ -71,7 +71,7 @@
 #ifdef IFUNCS_2
 #include "sofs_ifuncs_2.h"
 #endif
-/* #define  IFUNCS_3 */
+#define  IFUNCS_3
 #ifdef IFUNCS_3
 #include "sofs_ifuncs_3.h"
 #endif
@@ -748,7 +748,7 @@ static void readFileCluster (void)
     scanf ("%*c");
   } while (t != 1);
   nClust = (uint32_t) valInt;
-  if ((stat = soReadFileCluster (nInode, nClust, dc.info.data)) != 0)
+  if ((stat = soReadFileCluster (nInode, nClust, &dc)) != 0)
      printError (stat, "soReadFileCluster");
      else { if (fl == stdout) fprintf (fl, "\e[07;32m==>\e[0m ");
             printCluster (&dc, nClust);
@@ -846,7 +846,7 @@ static void writeFileCluster (void)
   byte = (uint8_t) valInt;
   for (i = 0; i < BSLPC; i++)
     dc.info.data[i] = byte;
-  if ((stat = soWriteFileCluster (nInode, nClust, dc.info.data)) != 0)
+  if ((stat = soWriteFileCluster (nInode, nClust, &dc)) != 0)
      printError (stat, "soWriteFileCluster");
      else { if (fl == stdout) fprintf (fl, "\e[07;32m==>\e[0m ");
             fprintf(fl, "Cluster with index no. %u  to the list of direct references is successfully written.\n", nClust);
