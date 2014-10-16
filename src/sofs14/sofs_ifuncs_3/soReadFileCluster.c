@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <string.h>
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
@@ -63,7 +64,44 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (411, "07;31", "soReadFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  /* insert your code here */
+  int error;
+  uint32_t nLogicClust;
+	SOInode *pInode;
+	SOSuperBlock *p_sosb;
+
+  //Load do SuperBlock
+  if((error = soLoadSuperBlock())!=0){
+    return error;
+  }
+
+  //Obter o ponteiro para o conteudo do SuperBlock
+  p_sosb = soGetSuperBlock();
+
+  //Validacao de conformidade
+  if((nInode >= p_sosb->iTotal) || (clustInd >= MAX_FILE_CLUSTERS) || (buff == NULL)){
+    return -EINVAL;
+  }
+
+  //Validacao de consistencia
+  if((error = soReadInode(pInode, nInode, 0)) != 0){
+    return error;
+  }
+
+  //Obter o numero logico do cluster
+  if((error = soHandleFileCluster(nInode, clustInd, GET, &nLogicClust)) != 0){
+    return error;
+  }
+
+  //Se o cluster ainda nao tiver sido alocado, preenche-se a regiao de armazenamento com \0's
+  if(nLogicClust == NULL_CLUSTER){
+    memset(buff,'\0',BSLPC);
+  }
+
+  //Se o cluster ja estiver alocado, passar o conteudo do cluster para o buffer
+  else{
+    if((error = soReadCacheCluster(p_sosb->dZoneStart + nLogicClust * BLOCKS_PER_CLUSTER, buff)) != 0)
+			return error;
+  }
 
   return 0;
 }
