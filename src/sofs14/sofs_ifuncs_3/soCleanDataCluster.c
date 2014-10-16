@@ -48,7 +48,8 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
  *
  *  \return <tt>0 (zero)</tt>, on success
  *  \return -\c EINVAL, if the <em>inode number</em> or the <em>logical cluster number</em> are out of range
- *  \return -\c EFDININVAL, if the free inode in the dirty state is inconsistent
+ *  \return -\c EFDININVAL, if the free inode in the dirty st123
+ ate is inconsistent
  *  \return -\c ELDCININVAL, if the list of data cluster references belonging to an inode is inconsistent
  *  \return -\c EDCINVAL, if the data cluster header is inconsistent
  *  \return -\c ELIBBAD, if some kind of inconsistency was detected at some internal storage lower level
@@ -60,8 +61,250 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 {
   soColorProbe (415, "07;31", "soCleanDataCluster (%"PRIu32", %"PRIu32")\n", nInode, nLClust);
+	
+	SOSuperBlock* p_sb;
+	SOInode* p_inode;
+	uint32_t stat,nblk,offset;
+	SODataClust c;
+	//Obter informação do SuperBloco
+	if((stat=soLoadSuperBlock())!=0){
+		return stat;
+			}
+	//Ponteiro para superbloco
+	p_sb=soGetSuperBlock();
 
-  /* insert your code here */
+	
+	//Verificar se nInode e nLClust são validos
+	if(nInode>=p_sb->iTotal || nInode<=0 || nLClust>=p_sb->dZoneTotal){
+
+		return -EINVAL;
+			}
+
+			if(stat=soConvertRefInt(nInode,&nblk,&offset)!=0){
+				return stat;
+			}
+
+			if(stat=(soLoadBlockInT(nblk))!=0){
+				return stat;
+			}
+
+		p_inode=soGetBlockInT();
+
+	//Se o inode livre no estado sujo for inconsistente
+	if((soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
+		return -EFDININVAL;
+
+				}
+
+	if((soQCheckDirCont(p_sb,&p_inode[offset]))!=0){
+
+					return -ELDCININVAL;
+				}
+
+	SODataClust* ref_clust;
+	int total_clust=p_inode.size/CLUSTER_SIZE;
+    int count = 0;
+    
+	for(i=0;i<N_Direct;i++){
+		c=p_inode[offset].d[i];
+
+		if(c.stat != NULL_INODE)
+		{
+			if(c.stat == nLClust)
+			{
+				soFreeDataCluster(nLClust);
+				p_inode[offset].d[i]=NULL_CLUSTER;
+			}
+			
+			else
+			{
+				count++;
+			}
+		} 	
+
+			if(count==total_clust){
+					return /*TOTal de clusTERS do inode atingido*/
+			}			
+
+	}
+		boolean n2=false;
+		boolean n1=false;
+		boolean done = false;
+		int k,trash;
+		//Carregar clusters de referência interna para memória
+		if((stat=soLoadSngIndRefClust(p_inode[offset].i1))!=0){
+		
+		ref_clust=soGetSngIndRefClust();
+
+		for(k=0;k<RPC;k++){
+
+			if(ref_clust.info.ref[k]!=NULL_CLUSTER){
+				
+				
+				if(ref_clust.info.ref[k]==nLClust){
+					count++;
+					trash=soFreeDataCluster(nLClust);
+					ref_clust.info.ref[k]=NULL_CLUSTER;
+					done = true;
+					if ( n1 == true){
+						if((stat=soStoreSngIndRefClust())!=0){
+							return stat;
+						}
+						return 0;
+					}
+
+					}
+
+				else {
+					n1 = true;
+					count++;
+				}
+
+			}
+
+			if(count==total_clust && n1==true){
+				if((stat=soStoreSngIndRefClust())!=0){
+					return stat;
+				}
+				return /*vao acontecer cenas*/
+			}
+
+
+
+		}
+
+		if(n1==false){
+
+				trash=soFreeDataCluster(p_inode[offset].i1);
+				p_inode[offset].i1=NULL_CLUSTER;
+				if ( done == true){
+					return 0;
+				}
+		}		
+		else{
+				if((stat=soStoreSngIndRefClust())!=0){
+					return stat;
+				}
+				if ( done == true){
+					return 0;
+				}
+
+			}
+
+
+			if((stat=soLoadSngIndRefClust(p_inode[offset].i2)!=0){
+
+					return stat;
+			}
+
+
+			for(k=0;k<RPC;k++){
+
+				if(ref_clust.info.ref[k]!=NULL_CLUSTER){
+
+					if(ref_clust.info.ref[k]==nLClust){
+							count++;
+							if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0){
+								return stat;
+							}
+							for (int i = 0; i < RPC; i++)
+							{
+								if(ref_clust.info.ref[i]!=NULL_CLUSTER){
+									count++;
+									trash=soFreeDataCluster(ref_clust.info.ref[i]);
+									}
+
+							}
+
+							if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0){
+									return stat;
+					}
+						trash=soFreeDataCluster(ref_clust.info.ref[k]);
+						ref_clust.info.ref[k]=NULL_CLUSTER;
+						done = true;
+						if((stat=soStoreSngIndRefClust())!=0){
+					return stat;
+				}
+					}
+					else{
+						if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0){
+								return stat;
+							}
+						n1 = false;
+						
+						for ( i = 0; i<RPC; i++){
+
+							if (ref_clust.info.ref[i] != NULL_CLUSTER){
+								if (ref_clust.info.ref[i] == nLClust){
+									count++;
+									/*if((stat=soStoreSngIndRefClust())!=0){
+										return stat;
+									}*/
+									trash = soFreeDataCluster(nLClust);
+									ref_clust.info.ref[i] = NULL_CLUSTER;
+									if (n1==true){
+										if((stat=soStoreSngIndRefClust())!=0){
+											return stat;
+										}
+										return 0;
+									}
+								}
+								else{
+									count++;
+									n1 = true;
+								}
+							}
+							if (count == total_clust && n1 == true){
+								if((stat=soStoreSngIndRefClust())!=0){
+									return stat;
+								}
+								return 0;
+							}
+							if (done == true && n1 == true){
+								return 0;
+							}
+						}	
+						if ( n1 == true){
+							n2 = true;
+						}
+						else{
+							if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0){
+									return stat;
+							}
+							trash = soFreeDataCluster(ref_clust.info.ref[k]);
+							ref_clust.info.ref[k] = NULL_CLUSTER;
+							if((stat=soStoreSngIndRefClust())!=0){
+										return stat;
+							}
+							if (n2 == true){
+								return 0;
+							}
+						}
+						count++;
+
+					}
+
+
+				}
+				if (n2==true && done == true){
+					return 0;
+				}
+				if(n2==true && count==total_clust){
+					return /* vao acontecer cenas ai*/
+				}
+			}
+			if (n2 == false){
+				trash = soFreeDataCluster(p_inode[offset].i2);
+				p_inode[offset].i2 = NULL_CLUSTER;
+			}
+
+	if ((stat = soStoreBlockInT())!= 0){
+		return stat;
+	}
+	if ((stat = soStoreSuperBlock())!=0){
+		return stat;
+	}
+  /* insert your code here - insert aqui o crlh !!!!! */
 
   return 0;
 }
