@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <string.h>
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
@@ -141,27 +142,27 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
   p_inode = soGetBlockInT();
 
   if(op == CLEAN){
-    if(soQCheckFDInode(p_sb, &p_inode[offset])){
-      return -EFDININVAL;
+    if((stat = soQCheckFDInode(p_sb, &p_inode[offset]))){
+      return stat;
     }
   }else{
-    if(soQCheckInodeIU(p_sb, &p_inode[offset])){
-      return -EIUININVAL;
+    if((stat = soQCheckInodeIU(p_sb, &p_inode[offset]))){
+      return stat;
     }
   }
 
-  if(clustInd < N_DIRECT){
+  if(clustInd <= N_DIRECT){
     if((stat = soHandleDirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
       return stat;
     }
     /* RPC => number of data cluster references per data cluster */
     /* referência indireta => i1 */
-  }else if(clustInd >= N_DIRECT && clustInd < (N_DIRECT + RPC)){
+  }else if(clustInd <= (N_DIRECT + RPC)){
     if((stat = soHandleSIndirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
       return stat;
     }
     /* referência duplamente indirecta => i1 + i2 */
-  }else if(clustInd >= (N_DIRECT+RPC) && clustInd < MAX_FILE_CLUSTERS){
+  }else if(clustInd <= MAX_FILE_CLUSTERS){
     if((stat = soHandleDIndirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
       return stat;
     }
@@ -301,10 +302,10 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
 
   if(p_inode->i1 != NULL_CLUSTER){
     clustRef = p_sb->dZoneStart + p_inode->i1 * BLOCKS_PER_CLUSTER;
-    if((stat = soLoadDirRefClust(clustRef))){
+    if((stat = soLoadSngIndRefClust(clustRef))){
       return stat;
     }
-    p_clust = soGetDirRefClust();
+    p_clust = soGetSngIndRefClust();
   }
 
   switch(op){
@@ -328,11 +329,11 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
         p_inode->cluCount++;
 
         clustRef = p_sb->dZoneStart + nClust * BLOCKS_PER_CLUSTER;
-        if((stat = soLoadDirRefClust(clustRef))){
+        if((stat = soLoadSngIndRefClust(clustRef))){
           return stat;
         }
         
-        p_clust = soGetDirRefClust();
+        p_clust = soGetSngIndRefClust();
 
         int i;
         for(i=0; i<RPC; i++){
@@ -355,7 +356,7 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
       }
       p_inode->cluCount++;
 
-      if((stat = soStoreDirRefClust())){
+      if((stat = soStoreSngIndRefClust())){
         return stat;
       }
 
@@ -426,7 +427,7 @@ int sIndirect_CLEAN(SOInode *p_inode, SODataClust *p_clust, uint32_t clustInd, u
     p_inode->cluCount--;
   }
 
-  if((stat = soStoreDirRefClust())){
+  if((stat = soStoreSngIndRefClust())){
     return stat;
   }
 
@@ -463,9 +464,39 @@ int sIndirect_CLEAN(SOInode *p_inode, SODataClust *p_clust, uint32_t clustInd, u
 int soHandleDIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uint32_t clustInd, uint32_t op,
     uint32_t *p_outVal)
 {
+  uint32_t tmp_nl_Cluster, stat, i;
+  SODataClust *cluster;
 
-  /* insert your code here */
+  if(p_inode->i2 == NULL_CLUSTER && op == ALLOC){
+    /* se a operação ALLOC e não existir na tabela de i1 (cluster que extende i1) em i2 */
+    if((stat = soAllocDataCluster(nInode, &tmp_nl_Cluster))){
+      return stat;
+    }
+    if((stat = soLoadSngIndRefClust(p_sb->dZoneStart+tmp_nl_Cluster*BLOCKS_PER_CLUSTER))){
+      return stat;
+    }
+    cluster = soGetSngIndRefClust();
 
+    for(i = 0; i < RPC; ++i){
+      cluster->info.ref[i] = NULL_CLUSTER;
+    }
+
+    if((stat = soStoreSngIndRefClust())){
+      return stat;
+    }
+
+    p_inode->cluCount++;
+    p_inode->i2 = tmp_nl_Cluster;
+  }
+
+  if(p_inode->i2 != NULL_CLUSTER){
+    if((stat = soLoadSngIndRefClust(p_sb->dZoneStart + p_inode->i2*BLOCKS_PER_CLUSTER))){
+      return stat;
+    }
+
+    cluster = soGetSngIndRefClust();
+    
+  }
   return 0;
 }
 
@@ -490,8 +521,11 @@ int soAttachLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t clustI
 {
 
   int stat;
-  uint32_t prev_ind, next_ind;
+  uint32_t NFClt, prev_ind, next_ind;
   SODataClust p_clust;
+
+  /*Numero fisico do cluster alocado*/
+  NFClt = p_sb->dZoneStart + nLClust * BLOCKS_PER_CLUSTER;
 
   if((stat = soHandleFileCluster(nInode, clustInd - 1, GET, &prev_ind))){
     return stat;
@@ -501,7 +535,7 @@ int soAttachLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t clustI
     return stat;
   }
 
-  if ((stat = soReadCacheCluster(p_sb->dZoneStart + nLClust * BLOCKS_PER_CLUSTER, &p_clust)) != 0){
+  if ((stat = soReadCacheCluster(NFClt, &p_clust)) != 0){
         return stat;
   }
 
@@ -513,7 +547,7 @@ int soAttachLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t clustI
     p_clust.next = next_ind;
   }
 
-  if((stat = soWriteCacheCluste(nClust, &p_clust))){
+  if((stat = soWriteCacheCluster(NFClt, &p_clust))){
     return stat;
   }
 
@@ -539,7 +573,7 @@ int soAttachLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t clustI
 int soCleanLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t nLClust)
 {
 
-  uint32_t nClust;
+  uint32_t NFClt;
   int stat;
   SODataClust p_clust;
 
@@ -547,7 +581,7 @@ int soCleanLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t nLClust
   NFClt = p_sb->dZoneStart + nLClust * BLOCKS_PER_CLUSTER;
 
   /*update campo stat*/
-  if((stat = soReadCacheCluster(nClust, &p_clust)){
+  if((stat = soReadCacheCluster(NFClt, &p_clust))){
     return stat;
   }
   if(p_clust.stat != nInode){
@@ -556,9 +590,9 @@ int soCleanLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t nLClust
 
   p_clust.stat = NULL_INODE;
 
-  memset(p_clust.info.data,0,BSLPC) /*limpar datacluster*/
+  memset(p_clust.info.data, 0, BSLPC); /*limpar datacluster*/
 
-  if((stat = soWriteCacheCluste(nClust, &p_clust))){
+  if((stat = soWriteCacheCluster(NFClt, &p_clust))){
     return stat;
   }
 

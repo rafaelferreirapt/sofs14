@@ -80,7 +80,57 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
 {
   soColorProbe (414, "07;31", "soHandleFileClusters (%"PRIu32", %"PRIu32", %"PRIu32")\n", nInode, clustIndIn, op);
 
-  /* insert your code here */
+  SOSuperBlock *p_sb;
+  SOInode *p_inode;
+  uint32_t stat, nBlk, offset, *p_outVal = NULL;
+  int i = clustIndIn;
+
+  if((stat = soLoadSuperBlock())){
+  	return stat;
+  }
+
+  p_sb = soGetSuperBlock();
+
+  if(nInode < 0 || nInode > p_sb->iTotal){
+  	return -EINVAL;
+  }
+
+  if(clustIndIn > MAX_FILE_CLUSTERS){
+  	return -EINVAL;
+  }
+
+  if(op != FREE && op != FREE_CLEAN && op != CLEAN){
+  	return -EINVAL;
+  }
+
+  if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
+  	return stat;
+  }
+
+  if((stat = soLoadBlockInT(nBlk))){
+  	return stat;
+  }
+
+  p_inode = soGetBlockInT();
+
+  if((stat = soQCheckInodeIU(p_sb, &p_inode[offset])) && (op != CLEAN)){
+  	return stat;
+  }
+
+  if((stat = soQCheckFDInode(p_sb, &p_inode[offset])) && (op == CLEAN)){
+  	return stat;
+  }
+
+  for (; i < MAX_FILE_CLUSTERS ; ++i){
+  	if((stat = soHandleFileCluster(nInode, i, GET, p_outVal))){
+		return stat;
+  	}
+  	if(*p_outVal != NULL_CLUSTER){
+  		if((stat = soHandleFileCluster(nInode, i, op, p_outVal))){
+  			return stat;
+  		}
+  	}
+  }
 
   return 0;
 }
