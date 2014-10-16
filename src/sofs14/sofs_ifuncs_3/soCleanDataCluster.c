@@ -123,7 +123,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		} 	
 
 			if(count==total_clust){
-					return /*TOTal de clusTERS do inode atingido*/
+					return /*Total de clusTERS do inode atingido*/
 			}			
 
 	}
@@ -166,7 +166,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				if((stat=soStoreSngIndRefClust())!=0){
 					return stat;
 				}
-				return /*vao acontecer cenas*/
+				return /*Falar prof*/
 			}
 
 
@@ -290,7 +290,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					return 0;
 				}
 				if(n2==true && count==total_clust){
-					return /* vao acontecer cenas ai*/
+					return /* Falar prof*/
 				}
 			}
 			if (n2 == false){
@@ -304,7 +304,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	if ((stat = soStoreSuperBlock())!=0){
 		return stat;
 	}
-  /* insert your code here - insert aqui o crlh !!!!! */
-
+  
   return 0;
 }
