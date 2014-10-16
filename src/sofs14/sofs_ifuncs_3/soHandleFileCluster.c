@@ -302,10 +302,10 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
 
   if(p_inode->i1 != NULL_CLUSTER){
     clustRef = p_sb->dZoneStart + p_inode->i1 * BLOCKS_PER_CLUSTER;
-    if((stat = soLoadSngIndRefClust(clustRef))){
+    if((stat = soLoadDirRefClust(clustRef))){
       return stat;
     }
-    p_clust = soGetSngIndRefClust();
+    p_clust = soGetDirRefClust();
   }
 
   switch(op){
@@ -329,11 +329,11 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
         p_inode->cluCount++;
 
         clustRef = p_sb->dZoneStart + nClust * BLOCKS_PER_CLUSTER;
-        if((stat = soLoadSngIndRefClust(clustRef))){
+        if((stat = soLoadDirRefClust(clustRef))){
           return stat;
         }
         
-        p_clust = soGetSngIndRefClust();
+        p_clust = soGetDirRefClust();
 
         int i;
         for(i=0; i<RPC; i++){
@@ -356,7 +356,7 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
       }
       p_inode->cluCount++;
 
-      if((stat = soStoreSngIndRefClust())){
+      if((stat = soStoreDirRefClust())){
         return stat;
       }
 
@@ -427,7 +427,7 @@ int sIndirect_CLEAN(SOInode *p_inode, SODataClust *p_clust, uint32_t clustInd, u
     p_inode->cluCount--;
   }
 
-  if((stat = soStoreSngIndRefClust())){
+  if((stat = soStoreDirRefClust())){
     return stat;
   }
 
@@ -464,40 +464,7 @@ int sIndirect_CLEAN(SOInode *p_inode, SODataClust *p_clust, uint32_t clustInd, u
 int soHandleDIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uint32_t clustInd, uint32_t op,
     uint32_t *p_outVal)
 {
-  uint32_t tmp_nl_Cluster, stat, i;
-  SODataClust *cluster;
 
-  if(p_inode->i2 == NULL_CLUSTER && op == ALLOC){
-    /* se a operação ALLOC e não existir na tabela de i1 (cluster que extende i1) em i2 */
-    if((stat = soAllocDataCluster(nInode, &tmp_nl_Cluster))){
-      return stat;
-    }
-    if((stat = soLoadSngIndRefClust(p_sb->dZoneStart+tmp_nl_Cluster*BLOCKS_PER_CLUSTER))){
-      return stat;
-    }
-    cluster = soGetSngIndRefClust();
-
-    for(i = 0; i < RPC; ++i){
-      cluster->info.ref[i] = NULL_CLUSTER;
-    }
-
-    if((stat = soStoreSngIndRefClust())){
-      return stat;
-    }
-
-    p_inode->cluCount++;
-    p_inode->i2 = tmp_nl_Cluster;
-  }
-
-  if(p_inode->i2 != NULL_CLUSTER){
-    if((stat = soLoadSngIndRefClust(p_sb->dZoneStart + p_inode->i2*BLOCKS_PER_CLUSTER))){
-      return stat;
-    }
-
-    cluster = soGetSngIndRefClust();
-    
-  }
-  return 0;
 }
 
 /**
