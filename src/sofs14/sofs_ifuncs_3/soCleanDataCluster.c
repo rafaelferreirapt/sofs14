@@ -80,15 +80,15 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return -EINVAL;
 			}
 
-			if(stat=soConvertRefInt(nInode,&nblk,&offset)!=0){
-				return stat;
-			}
+	if(stat=soConvertRefInt(nInode,&nblk,&offset)!=0){
+		return stat;
+	}
 
-			if(stat=(soLoadBlockInT(nblk))!=0){
-				return stat;
-			}
-
-		p_inode=soGetBlockInT();
+	if(stat=(soLoadBlockInT(nblk))!=0){
+		return stat;
+	}
+	// obtençao de ponteiro para o bloco onde se encontra o Inode
+	p_inode=soGetBlockInT();
 
 	//Se o inode livre no estado sujo for inconsistente
 	if((soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
@@ -102,208 +102,347 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				}
 
 	SODataClust* ref_clust;
+	// numero total de clusters que compoem o Inode
 	int total_clust=p_inode.size/CLUSTER_SIZE;
+	// contador que indica quantos clusters do Inode ja foram encontrados
     int count = 0;
-    
-	for(i=0;i<N_Direct;i++){
+    int c;
+    // array de referenciação directa
+	for(i=0;i<N_DIRECT;i++)
+	{
 		c=p_inode[offset].d[i];
 
-		if(c.stat != NULL_INODE)
+		if(c.stat != NULL_CLUSTER)
 		{
 			if(c.stat == nLClust)
 			{
-				soFreeDataCluster(nLClust);
-				p_inode[offset].d[i]=NULL_CLUSTER;
+				// limpeza o cluster de dados atraves da função HandleFileCluster
+				if((stat=soHandleFileCluster(nInode,i,FREE_CLEAN,))!=0)
+				{
+					return stat;
+				}
+				//soFreeDataCluster(nLClust);
+				//p_inode[offset].d[i]=NULL_CLUSTER;
 			}
-			
+			// se cluster exsite ( != NULL_CLUSTER ) e nao e o que pretendemos entao contador incrementa			
 			else
 			{
 				count++;
 			}
 		} 	
-
-			if(count==total_clust){
-					return /*Total de clusTERS do inode atingido*/
-			}			
+		// percorremos enconcontramos nClusters = ao total de CLusters do inode sem que nLClust tenha aparecido
+		if(count==total_clust)
+		{
+			return /*Total de clusTERS do inode atingido*/
+		}			
 
 	}
-		boolean n2=false;
-		boolean n1=false;
-		boolean done = false;
-		int k,trash;
-		//Carregar clusters de referência interna para memória
-		if((stat=soLoadSngIndRefClust(p_inode[offset].i1))!=0){
-		
-		ref_clust=soGetSngIndRefClust();
+	boolean n2=false;
+	boolean n1=false;
+	boolean done = false;
+	int k,trash;
+	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
+	if((stat=soLoadSngIndRefClust(p_inode[offset].i1))!=0){
+	// ponteiro para custer que esteja na memoria interna
+	ref_clust=soGetSngIndRefClust();
+	// Cluster I1 de referenciação simplesmente indirecta
+	for(k=0;k<RPC;k++)
+	{
 
-		for(k=0;k<RPC;k++){
+		if(ref_clust.info.ref[k]!=NULL_CLUSTER)
+		{
+				
+			if(ref_clust.info.ref[k]==nLClust)
+			{
+				count++;
+				trash=soFreeDataCluster(nLClust);
+				ref_clust.info.ref[k]=NULL_CLUSTER;
+				done = true;
+				//caso i1 nao fique vazia apos se remover nLClust, funçao termina aqui
+				if ( n1 == true)
+				{
+					if((stat=soStoreSngIndRefClust())!=0)
+					{
+						return stat;
+					}
+					// armazenar de volta informaçao do Inode
+					if ((stat = soStoreBlockInT())!= 0)
+					{
+						return stat;
+					}
+					// armazenar de volta a informação do superbloco
+					if ((stat = soStoreSuperBlock())!=0)
+					{
+						return stat;
+					}
+					return 0;
+				}
 
-			if(ref_clust.info.ref[k]!=NULL_CLUSTER){
-				
-				
-				if(ref_clust.info.ref[k]==nLClust){
-					count++;
-					trash=soFreeDataCluster(nLClust);
-					ref_clust.info.ref[k]=NULL_CLUSTER;
-					done = true;
-					if ( n1 == true){
-						if((stat=soStoreSngIndRefClust())!=0){
+			}
+			/* caso cluster encontrado nao seja o que pretendemos incrementamos
+			contador e sinalizamos I1 como nao vazio ( n1 = true) */
+			else 
+			{
+				n1 = true;
+				count++;
+			}
+
+		}
+
+		if(count==total_clust && n1==true)
+		{
+			if((stat=soStoreSngIndRefClust())!=0)
+			{
+				return stat;
+			}
+			return /*Falar prof*/
+		}
+	}
+	// caso o cluster de referencia I1 tenha ficado livre/vazio
+	if(n1==false)
+	{
+		trash=soFreeDataCluster(p_inode[offset].i1);
+		p_inode[offset].i1=NULL_CLUSTER;
+		if ( done == true)
+		{
+			return 0;
+		}
+	}		
+	else
+	{
+		if((stat=soStoreSngIndRefClust())!=0)
+		{
+			return stat;
+		}
+		// cluster nao ficou vazio mas nLCluster ja foi limpo
+		if ( done == true)
+		{
+			return 0;
+		}
+
+	}
+	// carregar cluster de referencias I2 para a memoria interna
+	if((stat=soLoadSngIndRefClust(p_inode[offset].i2)!=0)
+	{
+		return stat;
+	}
+	// percorrer todas as referencias possiveis no cluster I2
+	for(k=0;k<RPC;k++)
+	{
+
+		if(ref_clust.info.ref[k]!=NULL_CLUSTER)
+		{
+			/* se cluster i1[k] == nLCluster temos que carregar i1[k] limpar e libertar todos os 
+			clusters de dados por ele referenciados e depois por fim libertar o cluster
+			de referencias i1[k]*/
+			if(ref_clust.info.ref[k]==nLClust)
+			{
+				count++;
+				if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0)
+				{
+					return stat;
+				}
+				/*percorrer todos e limpar todos os cluster de dados referenciados pelo cluster
+				de referencias i1[k]*/
+				for (int i = 0; i < RPC; i++)
+				{
+					if(ref_clust.info.ref[i]!=NULL_CLUSTER)
+					{
+						count++;
+						trash=soFreeDataCluster(ref_clust.info.ref[i]);
+					}
+				}
+				/* carregar novamente o cluster de referencias i2 e libertar
+				o recem limpo cluster de referencias i1[k] */
+				if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0)
+				{
+					return stat;
+				}
+				trash=soFreeDataCluster(ref_clust.info.ref[k]);
+				ref_clust.info.ref[k]=NULL_CLUSTER;
+				done = true;
+				if((stat=soStoreSngIndRefClust())!=0)
+				{
+					return stat;
+				}
+			}
+			/* caso cluster de referencias i1[k] seja o pretendido (nLCluster), 
+			temos entao que o carregar, e procurar em todos os cluster de dados referenciados 
+			por este mesmo cluster de referencias */
+			else
+			{
+				if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0)
+				{
+					return stat;
+				}
+				/* n1 = false, partimos do principio que o cluster de 
+				dados esta vazio */
+				n1 = false;
+
+				for ( i = 0; i<RPC; i++)
+				{
+
+					if (ref_clust.info.ref[i] != NULL_CLUSTER)
+					{
+						if (ref_clust.info.ref[i] == nLClust)
+						{
+							count++;
+									/*if((stat=soStoreSngIndRefClust())!=0){
+										return stat;
+									}*/
+							trash = soFreeDataCluster(nLClust);
+							ref_clust.info.ref[i] = NULL_CLUSTER;
+							/* claso cluster apagado e cluster de 
+							referencias nao vazio, funçao termina */
+							if (n1==true)
+							{
+								if((stat=soStoreSngIndRefClust())!=0)
+								{
+									return stat;
+								}
+								if ((stat = soStoreBlockInT())!= 0)
+								{
+									return stat;
+								}
+								// armazenar de volta a informação do superbloco
+								if ((stat = soStoreSuperBlock())!=0)
+								{
+									return stat;
+								}
+								return 0;
+							}
+						}
+						else
+						{
+							count++;
+							n1 = true;
+						}
+					}
+					/* foram encontrados tantos clusters de dados quandos os 
+					clusters de dados do inode sem que encontrasse nLClust*/ 
+					if (count == total_clust && done == false)
+					{
+						if((stat=soStoreSngIndRefClust())!=0)
+						{
+							return stat;
+						}
+						if ((stat = soStoreBlockInT())!= 0)
+						{
+							return stat;
+						}
+						// armazenar de volta a informação do superbloco
+						if ((stat = soStoreSuperBlock())!=0)
+						{
+							return stat;
+						}
+						return // Cluster nao encontrado
+					}
+					/* se nLClust limpo e i1[k] nao vazio, funçao terminada*/
+					if (done == true && n1 == true)
+					{
+						if ((stat = soStoreBlockInT())!= 0)
+						{
+							return stat;
+						}
+						// armazenar de volta a informação do superbloco
+						if ((stat = soStoreSuperBlock())!=0)
+						{
 							return stat;
 						}
 						return 0;
 					}
-
+				}	
+				if ( n1 == true)
+				{
+					n2 = true;
+				}
+				/* caso ao remover mos o nLClust i1[k] fique vazio,
+				temos que o libertar */
+				else
+				{
+					if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0)
+					{
+						return stat;
 					}
-
-				else {
-					n1 = true;
-					count++;
+					trash = soFreeDataCluster(ref_clust.info.ref[k]);
+					ref_clust.info.ref[k] = NULL_CLUSTER;
+					if((stat=soStoreSngIndRefClust())!=0)
+					{
+						return stat;
+					}
+					/* apos i1[k] removido, se i2 nao ficar estiver vazio ( n2 != false)
+					a funçao termina */
+					if (n2 == true)
+					{
+						if ((stat = soStoreBlockInT())!= 0)
+						{
+							return stat;
+						}
+						// armazenar de volta a informação do superbloco
+						if ((stat = soStoreSuperBlock())!=0)
+						{
+							return stat;
+						}
+						return 0;
+					}
 				}
-
+				count++;
 			}
-
-			if(count==total_clust && n1==true){
-				if((stat=soStoreSngIndRefClust())!=0){
-					return stat;
-				}
-				return /*Falar prof*/
-			}
-
-
-
 		}
-
-		if(n1==false){
-
-				trash=soFreeDataCluster(p_inode[offset].i1);
-				p_inode[offset].i1=NULL_CLUSTER;
-				if ( done == true){
-					return 0;
-				}
-		}		
-		else{
-				if((stat=soStoreSngIndRefClust())!=0){
-					return stat;
-				}
-				if ( done == true){
-					return 0;
-				}
-
+		/* se apos percorrar todas posiçoes possiveis, i2
+		nao ficou vazio e nLClust foi limpo, a funçao termina */
+		if (n2==true && done == true)
+		{
+			if ((stat = soStoreBlockInT())!= 0)
+			{
+				return stat;
 			}
-
-
-			if((stat=soLoadSngIndRefClust(p_inode[offset].i2)!=0){
-
-					return stat;
+			// armazenar de volta a informação do superbloco
+			if ((stat = soStoreSuperBlock())!=0)
+			{
+				return stat;
 			}
-
-
-			for(k=0;k<RPC;k++){
-
-				if(ref_clust.info.ref[k]!=NULL_CLUSTER){
-
-					if(ref_clust.info.ref[k]==nLClust){
-							count++;
-							if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0){
-								return stat;
-							}
-							for (int i = 0; i < RPC; i++)
-							{
-								if(ref_clust.info.ref[i]!=NULL_CLUSTER){
-									count++;
-									trash=soFreeDataCluster(ref_clust.info.ref[i]);
-									}
-
-							}
-
-							if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0){
-									return stat;
-					}
-						trash=soFreeDataCluster(ref_clust.info.ref[k]);
-						ref_clust.info.ref[k]=NULL_CLUSTER;
-						done = true;
-						if((stat=soStoreSngIndRefClust())!=0){
-					return stat;
-				}
-					}
-					else{
-						if((stat=soLoadSngIndRefClust(ref_clust.info.ref[k]))!=0){
-								return stat;
-							}
-						n1 = false;
-						
-						for ( i = 0; i<RPC; i++){
-
-							if (ref_clust.info.ref[i] != NULL_CLUSTER){
-								if (ref_clust.info.ref[i] == nLClust){
-									count++;
-									/*if((stat=soStoreSngIndRefClust())!=0){
-										return stat;
-									}*/
-									trash = soFreeDataCluster(nLClust);
-									ref_clust.info.ref[i] = NULL_CLUSTER;
-									if (n1==true){
-										if((stat=soStoreSngIndRefClust())!=0){
-											return stat;
-										}
-										return 0;
-									}
-								}
-								else{
-									count++;
-									n1 = true;
-								}
-							}
-							if (count == total_clust && n1 == true){
-								if((stat=soStoreSngIndRefClust())!=0){
-									return stat;
-								}
-								return 0;
-							}
-							if (done == true && n1 == true){
-								return 0;
-							}
-						}	
-						if ( n1 == true){
-							n2 = true;
-						}
-						else{
-							if((stat=soLoadSngIndRefClust(p_inode[offset].i2))!=0){
-									return stat;
-							}
-							trash = soFreeDataCluster(ref_clust.info.ref[k]);
-							ref_clust.info.ref[k] = NULL_CLUSTER;
-							if((stat=soStoreSngIndRefClust())!=0){
-										return stat;
-							}
-							if (n2 == true){
-								return 0;
-							}
-						}
-						count++;
-
-					}
-
-
-				}
-				if (n2==true && done == true){
-					return 0;
-				}
-				if(n2==true && count==total_clust){
-					return /* Falar prof*/
-				}
+			return 0;
+		}
+		/* caso i2 nao vazio e count = total de clusters de dados do Inode,
+		nLClust nao encontrado */
+		if(n2==true && count==total_clust)
+		{
+			if ((stat = soStoreBlockInT())!= 0)
+			{
+				return stat;
 			}
-			if (n2 == false){
-				trash = soFreeDataCluster(p_inode[offset].i2);
-				p_inode[offset].i2 = NULL_CLUSTER;
+			// armazenar de volta a informação do superbloco
+			if ((stat = soStoreSuperBlock())!=0)
+			{
+				return stat;
 			}
-
-	if ((stat = soStoreBlockInT())!= 0){
+			return //nLClust nao encontrado
+		}
+	}if ((stat = soStoreBlockInT())!= 0)
+	{
 		return stat;
 	}
-	if ((stat = soStoreSuperBlock())!=0){
+	// armazenar de volta a informação do superbloco
+	if ((stat = soStoreSuperBlock())!=0)
+	{
 		return stat;
 	}
-  
+	// caso cluster de referencias I2 tenha ficado livre/vazio temos que o remover/limpar
+	if (n2 == false)
+	{
+		trash = soFreeDataCluster(p_inode[offset].i2);
+		p_inode[offset].i2 = NULL_CLUSTER;
+	}
+	// armazenar de volta informaçao do Inode
+	if ((stat = soStoreBlockInT())!= 0)
+	{
+		return stat;
+	}
+	// armazenar de volta a informação do superbloco
+	if ((stat = soStoreSuperBlock())!=0)
+	{
+		return stat;
+	}
   return 0;
 }
