@@ -66,6 +66,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	SOInode* p_inode;
 	uint32_t stat,nblk,offset;
 	SODataClust c;
+	const char str* ="Cluster not Found";
 	//Obter informação do SuperBloco
 	if((stat=soLoadSuperBlock())!=0){
 		return stat;
@@ -133,7 +134,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		// percorremos enconcontramos nClusters = ao total de CLusters do inode sem que nLClust tenha aparecido
 		if(count==total_clust)
 		{
-			return /*Total de clusTERS do inode atingido*/
+			return perror(&str);
 		}			
 
 	}
@@ -195,7 +196,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			{
 				return stat;
 			}
-			return /*Falar prof*/
+			return perror(&str);
 		}
 	}
 	// caso o cluster de referencia I1 tenha ficado livre/vazio
@@ -335,7 +336,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 						{
 							return stat;
 						}
-						return // Cluster nao encontrado
+						return perror(&str);
 					}
 					/* se nLClust limpo e i1[k] nao vazio, funçao terminada*/
 					if (done == true && n1 == true)
@@ -417,7 +418,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			{
 				return stat;
 			}
-			return //nLClust nao encontrado
+			return perror(&str);
 		}
 	}if ((stat = soStoreBlockInT())!= 0)
 	{
