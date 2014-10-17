@@ -495,7 +495,7 @@ int soHandleDIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
         if(p_clust->info.ref[l2] == NULL_CLUSTER){
           *p_outVal = NULL_CLUSTER;
         }else{
-          if((stat = soLoadDirRefClust(p_sb->dZoneStart + dc->info.ref[l2] * BLOCKS_PER_CLUSTER)) != 0){
+          if((stat = soLoadDirRefClust(p_sb->dZoneStart + p_clust->info.ref[l2] * BLOCKS_PER_CLUSTER)) != 0){
             return stat;
           }
           
@@ -570,7 +570,7 @@ int soHandleDIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
 
       p_clust->info.ref[l1] = *p_outVal = *nClust;
 
-      if((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, dc->info.ref[l1])) != 0){
+      if((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, p_clust->info.ref[l1])) != 0){
         return stat;
       }
 
