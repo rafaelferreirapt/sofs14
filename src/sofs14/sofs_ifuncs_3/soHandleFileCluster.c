@@ -354,9 +354,12 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
       }
 
       p_clust->info.ref[clustInd] = nClust;
+      /*
+      Esta a dar probs here
       if((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, nClust))){
         return stat;
       }
+      */
       p_inode->cluCount++;
 
       if((stat = soStoreDirRefClust())){

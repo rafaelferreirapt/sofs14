@@ -25,7 +25,7 @@ OBJS += $(IFUNCS4)
 #IFUNCS3 += sofs_ifuncs_3/soWriteFileCluster.o
 #IFUNCS3 += sofs_ifuncs_3/soHandleFileCluster.o 
 #IFUNCS3 += sofs_ifuncs_3/soHandleFileClusters.o
-IFUNCS3 += sofs_ifuncs_3/soCleanDataCluster.o
+#IFUNCS3 += sofs_ifuncs_3/soCleanDataCluster.o
 
 #IFUNCS4  = sofs_ifuncs_4/soGetDirEntryByPath.o
 #IFUNCS4 += sofs_ifuncs_4/soGetDirEntryByName.o
