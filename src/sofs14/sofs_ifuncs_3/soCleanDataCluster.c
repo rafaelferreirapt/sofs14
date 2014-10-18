@@ -122,8 +122,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				{
 					return stat;
 				}
-				//soFreeDataCluster(nLClust);
-				//p_inode[offset].d[i]=NULL_CLUSTER;
 			}
 			// se cluster exsite ( != NULL_CLUSTER ) e nao e o que pretendemos entao contador incrementa			
 			else
@@ -156,8 +154,10 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			if(ref_clust.info.ref[k]==nLClust)
 			{
 				count++;
-				trash=soFreeDataCluster(nLClust);
-				ref_clust.info.ref[k]=NULL_CLUSTER;
+				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,))!=0)
+				{
+					return stat;
+				}
 				done = true;
 				//caso i1 nao fique vazia apos se remover nLClust, funçao termina aqui
 				if ( n1 == true)
@@ -206,6 +206,20 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		p_inode[offset].i1=NULL_CLUSTER;
 		if ( done == true)
 		{
+			if((stat=soStoreSngIndRefClust())!=0)
+			{
+				return stat;
+			}
+			// armazenar de volta informaçao do Inode
+			if ((stat = soStoreBlockInT())!= 0)
+			{
+				return stat;
+			}
+			// armazenar de volta a informação do superbloco
+			if ((stat = soStoreSuperBlock())!=0)
+			{
+				return stat;
+			}
 			return 0;
 		}
 	}		
@@ -218,6 +232,16 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		// cluster nao ficou vazio mas nLCluster ja foi limpo
 		if ( done == true)
 		{
+			// armazenar de volta informaçao do Inode
+			if ((stat = soStoreBlockInT())!= 0)
+			{
+				return stat;
+			}
+			// armazenar de volta a informação do superbloco
+			if ((stat = soStoreSuperBlock())!=0)
+			{
+				return stat;
+			}
 			return 0;
 		}
 
@@ -250,7 +274,10 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					if(ref_clust.info.ref[i]!=NULL_CLUSTER)
 					{
 						count++;
-						trash=soFreeDataCluster(ref_clust.info.ref[i]);
+						if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,))!=0)
+						{
+							return stat;
+						}
 					}
 				}
 				/* carregar novamente o cluster de referencias i2 e libertar
@@ -267,7 +294,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					return stat;
 				}
 			}
-			/* caso cluster de referencias i1[k] seja o pretendido (nLCluster), 
+			/* caso cluster de referencias i1[k] nao seja o pretendido (nLCluster), 
 			temos entao que o carregar, e procurar em todos os cluster de dados referenciados 
 			por este mesmo cluster de referencias */
 			else
@@ -291,8 +318,10 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 									/*if((stat=soStoreSngIndRefClust())!=0){
 										return stat;
 									}*/
-							trash = soFreeDataCluster(nLClust);
-							ref_clust.info.ref[i] = NULL_CLUSTER;
+							if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,))!=0)
+							{
+								return stat;
+							}			
 							/* claso cluster apagado e cluster de 
 							referencias nao vazio, funçao termina */
 							if (n1==true)
