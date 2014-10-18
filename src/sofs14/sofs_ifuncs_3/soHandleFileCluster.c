@@ -227,7 +227,7 @@ int soHandleDirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uint3
 
       p_inode->d[clustInd] = cluster;
       p_inode->cluCount++;
-      p_outVal = &cluster;
+      *p_outVal = cluster;
       break;
     case FREE:
       if(p_inode->d[clustInd] == NULL_CLUSTER){
@@ -248,6 +248,7 @@ int soHandleDirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uint3
         return stat;
       }
       p_inode->cluCount--;
+      p_inode->d[clustInd] = NULL_CLUSTER;
       break;
     case CLEAN:
       if(p_inode->d[clustInd] == NULL_CLUSTER){
@@ -266,6 +267,7 @@ int soHandleDirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uint3
         return stat;
       }
       p_inode->cluCount--;
+      p_inode->d[clustInd] = NULL_CLUSTER;
       break;
     }
 
