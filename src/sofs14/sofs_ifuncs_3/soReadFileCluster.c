@@ -66,8 +66,8 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   int error;
   uint32_t nLogicClust;
-	SOInode *pInode;
-	SOSuperBlock *p_sosb;
+  SOInode *pInode;
+  SOSuperBlock *p_sosb;
 
   //Load do SuperBlock
   if((error = soLoadSuperBlock())!=0){
@@ -83,7 +83,7 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   }
 
   //Validacao de consistencia
-  if((error = soReadInode(pInode, nInode, 0)) != 0){
+  if((error = soReadInode(pInode, nInode, IUIN)) != 0){
     return error;
   }
 
@@ -100,8 +100,10 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   //Se o cluster ja estiver alocado, passar o conteudo do cluster para o buffer
   else{
     if((error = soReadCacheCluster(p_sosb->dZoneStart + nLogicClust * BLOCKS_PER_CLUSTER, buff)) != 0)
-			return error;
+      return error;
   }
 
   return 0;
+
 }
+
