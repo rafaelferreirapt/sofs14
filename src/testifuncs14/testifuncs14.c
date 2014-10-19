@@ -75,7 +75,7 @@
 #ifdef IFUNCS_3
 #include "sofs_ifuncs_3.h"
 #endif
-/* #define  IFUNCS_4 */
+#define  IFUNCS_4
 #ifdef IFUNCS_4
 #include "sofs_ifuncs_4.h"
 #endif
@@ -1275,12 +1275,12 @@ static void initSymLink (void)
      { printError (-EINVAL, "soInitSymLink");
        return;
      }
-  if ((stat = soReadFileCluster (nInode, 0, dc.info.de)) != 0)
+  if ((stat = soReadFileCluster (nInode, 0, &dc)) != 0)
      { printError (stat, "soInitSymLink");
        return;
      }
   strcpy ((char *) dc.info.de, path);
-  stat = soWriteFileCluster (nInode, 0, dc.info.de);
+  stat = soWriteFileCluster (nInode, 0, &dc);
   if (stat != 0)
      printError (stat, "soInitSymLink");
      else fprintf(fl, "The symbolic link was successfully initialized.\n");
