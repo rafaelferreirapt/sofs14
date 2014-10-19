@@ -117,8 +117,7 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 
   int stat;
   SOSuperBlock* p_sb;
-  SOInode *p_inode;
-  uint32_t nBlk, offset;
+  SOInode *p_inode = NULL;
 
   if((stat = soLoadSuperBlock()) != 0){
     return stat;
@@ -135,45 +134,49 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
     return -EINVAL;
   }
 
-  if((stat = soConvertRefInT(nInode, &nBlk, &offset))!=0){
-    return stat;
-  }   
-
-  if((stat = soLoadBlockInT(nBlk))!=0){
-    return stat;
-  }
-  p_inode = soGetBlockInT();
-
   if(op == CLEAN){
-    if((stat = soQCheckFDInode(p_sb, &p_inode[offset]))){
+    if((stat = soReadInode(p_inode, nInode, FDIN)) != 0){
       return stat;
     }
   }else{
-    if((stat = soQCheckInodeIU(p_sb, &p_inode[offset]))){
+    if((stat = soReadInode(p_inode, nInode, IUIN)) != 0){
       return stat;
     }
   }
 
   if(clustInd <= N_DIRECT){
-    if((stat = soHandleDirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
+    if((stat = soHandleDirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
       return stat;
     }
     /* RPC => number of data cluster references per data cluster */
     /* referência indireta => i1 */
   }else if(clustInd <= (N_DIRECT + RPC)){
-    if((stat = soHandleSIndirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
+    if((stat = soHandleSIndirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
       return stat;
     }
     /* referência duplamente indirecta => i1 + i2 */
   }else if(clustInd <= MAX_FILE_CLUSTERS){
-    if((stat = soHandleDIndirect(p_sb, nInode, &p_inode[offset], clustInd, op, p_outVal))){
+    if((stat = soHandleDIndirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
       return stat;
     }
   }
 
-  if((stat = soStoreBlockInT())){
-    return stat;
+  if(GET){
+    return 0;
   }
+
+  if(op != GET){
+    if((stat = soWriteInode(p_inode, nInode, IUIN)) != 0){
+      return stat;
+    }
+  }
+  
+  if(op == ALLOC){
+    if ((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, *p_outVal)) != 0){
+      return stat;
+    }
+  }
+
   if((stat = soStoreSuperBlock())){
     return stat;
   }
@@ -355,7 +358,6 @@ int soHandleSIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
 
       p_clust->info.ref[clustInd] = nClust;
       /*
-      Esta a dar probs here
       if((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, nClust))){
         return stat;
       }
@@ -572,11 +574,11 @@ int soHandleDIndirect (SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, ui
       }
 
       p_clust->info.ref[l1] = *p_outVal = *nClust;
-
+      /*
       if((stat = soAttachLogicalCluster(p_sb, nInode, clustInd, p_clust->info.ref[l1])) != 0){
         return stat;
       }
-
+      */
       p_inode->cluCount++;
 
       if ((stat = soStoreSngIndRefClust()) != 0){

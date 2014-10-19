@@ -7,3 +7,7 @@ Makefile
 *.rst
 Makefile~
 myDisk
+diff/
+*.zip
+*.ours
+*.prof
