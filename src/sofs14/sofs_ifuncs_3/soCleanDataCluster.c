@@ -60,7 +60,6 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 
 int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 {
-	perror("Bacalhau"); 
   soColorProbe (415, "07;31", "soCleanDataCluster (%"PRIu32", %"PRIu32")\n", nInode, nLClust);
 	SOSuperBlock* p_sb;
 	SOInode* p_inode;
@@ -129,22 +128,21 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				count++;
 			}
 		}
-		perror("Bacalhau"); 	
 		// percorremos enconcontramos nClusters = ao total de CLusters do inode sem que nLClust tenha aparecido
 		if(count==total_clust)
 		{
 			 perror("Cluster Not Found");
 		}			
-
 	}
 	bool n2=false;
 	bool n1=false;
 	bool done = false;
 	int k,trash;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
-	if((stat=soLoadSngIndRefClust(p_inode[offset].i1))!=0){
+	if((stat=soLoadDirRefClust(p_inode[offset].i1))!=0){
 		return stat;
 	}
+	perror("Depois de I1");
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetSngIndRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
