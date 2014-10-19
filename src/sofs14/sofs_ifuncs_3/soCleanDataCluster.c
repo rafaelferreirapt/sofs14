@@ -61,7 +61,7 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 {
   soColorProbe (415, "07;31", "soCleanDataCluster (%"PRIu32", %"PRIu32")\n", nInode, nLClust);
-	
+	printf("problema na handle no D");
 	SOSuperBlock* p_sb;
 	SOInode* p_inode;
 	uint32_t stat,nblk,offset;
@@ -79,7 +79,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return -EINVAL;
 			}
 
-	if(stat=soConvertRefInt(nInode,&nblk,&offset)!=0){
+	if(stat=soConvertRefInT(nInode,&nblk,&offset)!=0){
 		return stat;
 	}
 
@@ -95,9 +95,9 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 
 				}
 
-	if((soQCheckDirCont(p_sb,&p_inode[offset]))!=0){
+	if(((stat=soQCheckFDInode(p_sb,&p_inode[offset])))!=0){
 
-					return -ELDCININVAL;
+					return stat;
 				}
 
 	SODataClust* ref_clust;
@@ -142,6 +142,8 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	int k,trash;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
 	if((stat=soLoadSngIndRefClust(p_inode[offset].i1))!=0){
+		return stat;
+	}
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetSngIndRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
@@ -474,6 +476,5 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	{
 		return stat;
 	}
-}
   return 0;
 }
