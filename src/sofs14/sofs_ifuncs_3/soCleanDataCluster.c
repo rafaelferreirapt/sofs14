@@ -60,8 +60,8 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 
 int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 {
+	perror("Bacalhau"); 
   soColorProbe (415, "07;31", "soCleanDataCluster (%"PRIu32", %"PRIu32")\n", nInode, nLClust);
-	printf("problema na handle no D");
 	SOSuperBlock* p_sb;
 	SOInode* p_inode;
 	uint32_t stat,nblk,offset;
@@ -95,7 +95,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 
 				}
 
-	if(((stat=soQCheckFDInode(p_sb,&p_inode[offset])))!=0){
+	if((stat=soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
 
 					return stat;
 				}
@@ -118,7 +118,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			if(c == nLClust)
 			{
 				// limpeza o cluster de dados atraves da função HandleFileCluster
-				if((stat=soHandleFileCluster(nInode,i,FREE_CLEAN,1))!=0)
+				if((stat=soHandleFileCluster(nInode,i,FREE_CLEAN,NULL))!=0)
 				{
 					return stat;
 				}
@@ -128,7 +128,8 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			{
 				count++;
 			}
-		} 	
+		}
+		perror("Bacalhau"); 	
 		// percorremos enconcontramos nClusters = ao total de CLusters do inode sem que nLClust tenha aparecido
 		if(count==total_clust)
 		{
@@ -156,7 +157,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			if(ref_clust->info.ref[k]==nLClust)
 			{
 				count++;
-				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,1))!=0)
+				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,NULL))!=0)
 				{
 					return stat;
 				}
@@ -276,7 +277,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 					{
 						count++;
-						if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,1))!=0)
+						if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,FREE_CLEAN,NULL))!=0)
 						{
 							return stat;
 						}
@@ -320,7 +321,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 									/*if((stat=soStoreSngIndRefClust())!=0){
 										return stat;
 									}*/
-							if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,1))!=0)
+							if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,NULL))!=0)
 							{
 								return stat;
 							}			
