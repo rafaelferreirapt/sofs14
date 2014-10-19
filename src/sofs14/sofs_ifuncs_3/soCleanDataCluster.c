@@ -139,10 +139,10 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	bool done = false;
 	int k,trash;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
-	if((stat=soLoadDirRefClust(p_inode[offset].i1))!=0){
+	if((stat=soLoadDirRefClust(p_sb->dzone_start + p_inode[offset].i1*BLOCKS_PER_CLUSTER))!=0){
 		return stat;
 	}
-	perror("Depois de I1");
+	//perror("Depois de I1");
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetSngIndRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
