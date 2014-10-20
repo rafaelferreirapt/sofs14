@@ -78,11 +78,11 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return -EINVAL;
 			}
 
-	if(stat=soConvertRefInT(nInode,&nblk,&offset)!=0){
+	if((stat=soConvertRefInT(nInode,&nblk,&offset))!=0){
 		return stat;
 	}
 
-	if(stat=(soLoadBlockInT(nblk))!=0){
+	if((stat=soLoadBlockInT(nblk))!=0){
 		return stat;
 	}
 	// obtençao de ponteiro para o bloco onde se encontra o Inode
@@ -116,6 +116,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		{
 			if(c == nLClust)
 			{
+				perror("Handle1");
 				// limpeza o cluster de dados atraves da função HandleFileCluster
 				if((stat=soHandleFileCluster(nInode,i,FREE_CLEAN,NULL))!=0)
 				{
@@ -138,19 +139,20 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 
 	int k;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
-	if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCK_PER_CLUSTER))!=0)
+	if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER))!=0)
 	{
 		return stat;
 	}
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetDirRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
-	if((p_sb->dZoneStart+(p_inode[offset].i1)*BLOCK_PER_CLUSTER) == nLClust)
+	if((p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER) == nLClust)
 	{
 		for (k = 0; k < RPC; k++)
 		{
 			if(ref_clust->info.ref[k]!=NULL_CLUSTER)
 			{
+				perror("Handle2");
 				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,NULL))!=0)
 				{
 					return stat;
@@ -160,14 +162,14 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return 0;
 	}
 	else
-	{	
+	{
 		for(k=0;k<RPC;k++)
 		{
 			if(ref_clust->info.ref[k]!=NULL_CLUSTER)
 			{
-					
 				if(ref_clust->info.ref[k]==nLClust)
 				{
+					perror("Handle3");
 					if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,NULL))!=0)
 					{
 						return stat;
@@ -186,18 +188,18 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		}		
 	}
 	// carregar cluster de referencias I2 para a memoria interna
-	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode[offset].i2*BLOCK_PER_CLUSTER)))!=0)
+	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode[offset].i2*BLOCKS_PER_CLUSTER)))!=0)
 	{
 		return stat;
 	}
 	ref_clust = soGetSngIndRefClust();
-	if((p_sb->dZoneStart+(p_inode[offset].i2*BLOCK_PER_CLUSTER) == nLClust)
+	if((p_sb->dZoneStart+(p_inode[offset].i2*BLOCKS_PER_CLUSTER)) == nLClust)
 	{
 		for (k=0;k<RPC;k++)
 		{
-			if((dZoneStart+(ref_clust->info.ref[k]*BLOCK_PER_CLUSTER))!= NULL_CLUSTER)
+			if((p_sb->dZoneStart+(ref_clust->info.ref[k]*BLOCKS_PER_CLUSTER))!= NULL_CLUSTER)
 			{
-				if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCK_PER_CLUSTER))!=0)
+				if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER))!=0)
 				{
 					return stat;
 				}
@@ -208,6 +210,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				{
 					if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 					{
+						perror("Handle4");
 						if((stat=soHandleFileCluster(nInode,N_DIRECT+(RPC*(k+1))+i,FREE_CLEAN,NULL))!=0)
 						{
 							return stat;
@@ -231,7 +234,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				de referencias i1[k]*/
 				if(ref_clust->info.ref[k]==nLClust)
 				{
-					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCK_PER_CLUSTER)!=0)
+					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER))!=0)
 					{
 						return stat;
 					}
@@ -242,6 +245,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					{
 						if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 						{
+							perror("Handle5");
 							if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,FREE_CLEAN,NULL))!=0)
 							{
 								return stat;
@@ -255,7 +259,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				por este mesmo cluster de referencias */
 				else
 				{
-					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCK_PER_CLUSTER))!=0)
+					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER))!=0)
 					{
 						return stat;
 					}
@@ -268,7 +272,8 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 						{
 							if (ref_clust->info.ref[i] == nLClust)
 							{
-								if((stat=soHandleFileCluster(nInode,N_DIRECT+(k+1)*RPC+i,FREE_CLEAN,1))!=0)
+								perror("Handle6");
+								if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,FREE_CLEAN,NULL))!=0)
 								{
 									return stat;
 								}
