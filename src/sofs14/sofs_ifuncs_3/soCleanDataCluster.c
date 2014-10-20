@@ -118,7 +118,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			{
 				perror("Handle1");
 				// limpeza o cluster de dados atraves da função HandleFileCluster
-				if((stat=soHandleFileCluster(nInode,i,FREE_CLEAN,NULL))!=0)
+				if((stat=soHandleFileCluster(nInode,i,CLEAN,NULL))!=0)
 				{
 					return stat;
 				}
@@ -153,7 +153,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			if(ref_clust->info.ref[k]!=NULL_CLUSTER)
 			{
 				perror("Handle2");
-				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,NULL))!=0)
+				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,CLEAN,NULL))!=0)
 				{
 					return stat;
 				}
@@ -170,7 +170,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				if(ref_clust->info.ref[k]==nLClust)
 				{
 					perror("Handle3");
-					if((stat=soHandleFileCluster(nInode,N_DIRECT+k,FREE_CLEAN,NULL))!=0)
+					if((stat=soHandleFileCluster(nInode,N_DIRECT+k,CLEAN,NULL))!=0)
 					{
 						return stat;
 					}
@@ -211,7 +211,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 					{
 						perror("Handle4");
-						if((stat=soHandleFileCluster(nInode,N_DIRECT+(RPC*(k+1))+i,FREE_CLEAN,NULL))!=0)
+						if((stat=soHandleFileCluster(nInode,N_DIRECT+(RPC*(k+1))+i,CLEAN,NULL))!=0)
 						{
 							return stat;
 						}
@@ -251,7 +251,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 						if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 						{
 							perror("Handle5");
-							if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,FREE_CLEAN,NULL))!=0)
+							if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,CLEAN,NULL))!=0)
 							{
 								return stat;
 							}
@@ -278,7 +278,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 							if (ref_clust->info.ref[i] == nLClust)
 							{
 								perror("Handle6");
-								if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,FREE_CLEAN,NULL))!=0)
+								if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,CLEAN,NULL))!=0)
 								{
 									return stat;
 								}
