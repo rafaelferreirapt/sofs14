@@ -139,14 +139,14 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 
 	int k;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
-	if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER))!=0)
+	if((stat=soLoadDirRefClust(p_sb->dZoneStart+((p_inode[offset].i1)*BLOCKS_PER_CLUSTER)))!=0)
 	{
 		return stat;
 	}
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetDirRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
-	if((p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER) == nLClust)
+	if((p_sb->dZoneStart+((p_inode[offset].i1)*BLOCKS_PER_CLUSTER)) == nLClust)
 	{
 		for (k = 0; k < RPC; k++)
 		{
@@ -188,18 +188,18 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		}		
 	}
 	// carregar cluster de referencias I2 para a memoria interna
-	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode[offset].i2*BLOCKS_PER_CLUSTER)))!=0)
+	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+((p_inode[offset]).i2*BLOCKS_PER_CLUSTER)))!=0)
 	{
 		return stat;
 	}
 	ref_clust = soGetSngIndRefClust();
-	if((p_sb->dZoneStart+(p_inode[offset].i2*BLOCKS_PER_CLUSTER)) == nLClust)
+	if((p_sb->dZoneStart+((p_inode[offset].i2)*BLOCKS_PER_CLUSTER)) == nLClust)
 	{
 		for (k=0;k<RPC;k++)
 		{
 			if((p_sb->dZoneStart+(ref_clust->info.ref[k]*BLOCKS_PER_CLUSTER))!= NULL_CLUSTER)
 			{
-				if((stat=soLoadDirRefClust(p_sb->dZoneStart+(p_inode[offset].i1)*BLOCKS_PER_CLUSTER))!=0)
+				if((stat=soLoadDirRefClust(p_sb->dZoneStart+((ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER)))!=0)
 				{
 					return stat;
 				}
@@ -226,7 +226,12 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	// percorrer todas as referencias possiveis no cluster I2
 		for(k=0;k<RPC;k++)
 		{
-
+			// carregar cluster de referencias I2 para a memoria interna
+			if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+((p_inode[offset]).i2*BLOCKS_PER_CLUSTER)))!=0)
+			{
+				return stat;
+			}
+			ref_clust = soGetSngIndRefClust();
 			if(ref_clust->info.ref[k]!=NULL_CLUSTER)
 			{
 				/* se cluster i1[k] == nLCluster temos que carregar i1[k] limpar e libertar todos os 
@@ -234,7 +239,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				de referencias i1[k]*/
 				if(ref_clust->info.ref[k]==nLClust)
 				{
-					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER))!=0)
+					if((stat=soLoadDirRefClust(p_sb->dZoneStart+((ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER)))!=0)
 					{
 						return stat;
 					}
@@ -259,7 +264,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				por este mesmo cluster de referencias */
 				else
 				{
-					if((stat=soLoadDirRefClust(p_sb->dZoneStart+(ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER))!=0)
+					if((stat=soLoadDirRefClust(p_sb->dZoneStart+((ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER)))!=0)
 					{
 						return stat;
 					}
