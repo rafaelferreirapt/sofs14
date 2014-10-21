@@ -96,6 +96,13 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	p_sb->dZoneFree -= 1;
 
 	cluster.prev = cluster.next = NULL_CLUSTER;
+	
+	if(cluster.stat != NULL_INODE){ /* it is, clean it */
+		if ((stat = soCleanDataCluster (cluster.stat, nClust)) != 0){
+   			return stat;
+		}
+	}
+
 	cluster.stat = nInode;
 
 	pAddress = p_sb->dZoneStart+(*p_nClust)*BLOCKS_PER_CLUSTER;

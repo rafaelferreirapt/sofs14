@@ -134,7 +134,16 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 			return stat;
 		}
 
-		soCleanInode(&p_iNode[offset]);
+		if((stat = soCleanInode(&p_iNode[offset]) != 0){
+			return stat;
+		}
+
+		if ((stat = soLoadBlockInT (nBlk)) != 0){
+      		return stat;
+		}
+		
+		p_iNode = soGetBlockInT();
+
 		//if ((stat = soQCheckFCInode(&p_itable[offset])) != 0) {
             //printf("nao está bem limpo fdx\n");
             //return stat;
