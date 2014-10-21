@@ -69,6 +69,7 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   SODataClust cluster;
   SOInode *pInode;
   SOSuperBlock *p_sosb;
+  uint32_t nBlk, offset;
 
   //Load do SuperBlock
   if((error = soLoadSuperBlock()) != 0){
@@ -79,9 +80,19 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   p_sosb = soGetSuperBlock();
 
   //Validacao de conformidade
-  if ((nInode >= p_sosb->iTotal) || (clustInd > MAX_FILE_CLUSTERS) || (buff == NULL)){
+  if (((nInode >= p_sosb->iTotal)|| nInode <= 0) || (clustInd > MAX_FILE_CLUSTERS) || (buff == NULL)){
     return -EINVAL;
   }
+
+  if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
+    return stat;
+  }
+
+  if((stat = soLoadBlockInT(nBlk))){
+    return stat;
+  }
+
+  pInode = soGetBlockInT();
 
   //Validacao de consistencia
   if((error = soReadInode(pInode, nInode, IUIN)) != 0){
