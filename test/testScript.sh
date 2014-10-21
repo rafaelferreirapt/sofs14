@@ -35,5 +35,4 @@ for (( i = 1; i <= 11; i++ )); do
 	diff ours/testVector$i.rst prof/testVector$i.rst >> diff/result$i.html
 done
 
-rm -rf ours
-rm -rf prof
+
