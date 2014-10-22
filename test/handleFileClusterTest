@@ -1,0 +1,16 @@
+./createEmptyFile zz 38
+./mkfs_sofs14_bin -z zz
+./showblock_sofs14 -s 0 zz
+./testifuncs14 zz
+1 #alloc inode
+2 #file
+#handle file clusters
+11
+1
+4
+alloc
+
+showblock -D 6 zzz (nill) (nill) (0001)
+
+11
+1

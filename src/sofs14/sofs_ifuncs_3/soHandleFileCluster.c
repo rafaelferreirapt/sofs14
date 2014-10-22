@@ -99,14 +99,14 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 {
   soColorProbe (413, "07;31", "soHandleFileCluster (%"PRIu32", %"PRIu32", %"PRIu32", %p)\n",
       nInode, clustInd, op, p_outVal);
-
+  printf("102\n");
   /* Validação de conformidade 
      - a operação solicitadea tem que ser válida 
    */
   if(op != GET && op != ALLOC && op != FREE && op != FREE_CLEAN && op != CLEAN){
     return -EINVAL;
   }
-
+  printf("109\n");
   /* se GET e ALLOC então *p_outVal != NULL */
   if(op == GET || op == ALLOC){
     if(p_outVal == NULL){
@@ -116,59 +116,62 @@ int soHandleFileCluster (uint32_t nInode, uint32_t clustInd, uint32_t op, uint32
 
   int stat;
   SOSuperBlock* p_sb;
-  SOInode *p_inode = NULL;
+  SOInode inode;
 
   if((stat = soLoadSuperBlock()) != 0){
     return stat;
   }
 
   p_sb = soGetSuperBlock();
-
+  printf("126\n");
   if(nInode >= p_sb->iTotal || nInode < 0){
     return -EINVAL;
   }
-
+  printf("130\n");
   /* CONFERIR SE É MAIOR OU MAIOR E IGUAL o clustInd */
   if(clustInd < 0 || clustInd >= MAX_FILE_CLUSTERS){
     return -EINVAL;
   }
-
+  printf("135\n");
   if(op == CLEAN){
-    if((stat = soReadInode(p_inode, nInode, FDIN)) != 0){
+    if((stat = soReadInode(&inode, nInode, FDIN)) != 0){
       return stat;
     }
   }else{
-    if((stat = soReadInode(p_inode, nInode, IUIN)) != 0){
+    if((stat = soReadInode(&inode, nInode, IUIN)) != 0){
       return stat;
     }
   }
+  printf("145\n");
 
   if(clustInd < N_DIRECT){
-    if((stat = soHandleDirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
+    if((stat = soHandleDirect(p_sb, nInode, &inode, clustInd, op, p_outVal))){
       return stat;
     }
     /* RPC => number of data cluster references per data cluster */
     /* referência indireta => i1 */
   }else if(clustInd < (N_DIRECT + RPC)){
-    if((stat = soHandleSIndirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
+    if((stat = soHandleSIndirect(p_sb, nInode, &inode, clustInd, op, p_outVal))){
       return stat;
     }
     /* referência duplamente indirecta => i1 + i2 */
   }else{
-    if((stat = soHandleDIndirect(p_sb, nInode, p_inode, clustInd, op, p_outVal))){
+    if((stat = soHandleDIndirect(p_sb, nInode, &inode, clustInd, op, p_outVal))){
       return stat;
     }
   }
 
   if(op == CLEAN){
-    if((stat = soWriteInode(p_inode, nInode, FDIN)) != 0){
+    if((stat = soWriteInode(&inode, nInode, FDIN)) != 0){
       return stat;
     }
   }else{
-    if((stat = soWriteInode(p_inode, nInode, IUIN)) != 0){
+    printf("168\n");
+    if((stat = soWriteInode(&inode, nInode, IUIN)) != 0){
       return stat;
     }
   }
+  printf("173\n");
 
   return 0;
 }
