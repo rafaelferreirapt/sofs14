@@ -84,14 +84,19 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 {
   soColorProbe (314, "07;31", "soRemDetachDirEntry (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
+  if(op != REM && op != DETACH){
+  	return -EINVAL;
+  }
+
   int stat;
-  SOInode inode;
+  SOInode inodeDir;
+  SODataClust dc;
 
   /*
 	Vou fazer load do inode, a função soReadInode já verifica se o número do inode
 	é valido ou não. O inode tem de estar em uso.
   */
-  if((stat = soReadInode(&inode, nInodeDir, IUIN))){
+  if((stat = soReadInode(&inodeDir, nInodeDir, IUIN))){
   	return stat;
   }
 
@@ -104,7 +109,14 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   /* 
 	Com a soQCheckDirCont sabemos se o inode representa um diretório e se o conteudo é consistente 
   */
-  if((stat = soQCheckDirCont(p_sb, &inode))){
+  if((stat = soQCheckDirCont(p_sb, &inodeDir))){
+  	return stat;
+  }
+
+  /* 
+  	Precisamos de permissões de escrita
+  */
+  if((stat = soAccessGranted(nInodeDir, W))){
   	return stat;
   }
 
@@ -128,27 +140,113 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	return stat;
   }
   
-  /* 
-  	Precisamos de permissões de escrita
-  */
-  if((stat = soAccessGranted(nInodeEnt, W))){
-  	return stat;
-  }
 
   if(op == REM){
   	if((inodeEntry.mode & INODE_DIR)){
   		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
   			return stat;
   		}
-  	}else{
-  		
+  		inodeEntry.refCount--;
+  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  			return stat;
+  		}
+  		if(inodeEntry.refCount==1){
+  			inodeEntry.refCount--;
+  			if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  				return stat;
+  			}
+  			if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
+  				return stat;
+  			}
+  			if((stat = soFreeInode(nInodeEnt))){
+  				return stat;
+  			}
+  			inodeDir.refCount--;
+  		}
+  	}else if(((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK))){
+  		inodeEntry.refCount--;
+  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  			return stat;
+  		}
+  		if(inodeEntry.refCount == 0){
+  			if((inodeEntry.mode & INODE_FILE)){
+  				if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
+	  				return stat;
+	  			}
+  			}else{
+	  			if((stat = soHandleFileCluster(nInodeEnt, 0, FREE, NULL))){
+	  				return stat;
+	  			}
+  			}
+  			
+  			if((stat = soFreeInode(nInodeEnt))){
+  				return stat;
+  			}
+  		}
   	}
+  	
+  	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+  		return stat;
+  	}
+
+  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+  		return stat;
+  	}
+
+  	unsigned char *array = dc.info.de[idxDir % DPC].name;
+	char aux = array[0];
+	array[0] = array[MAX_NAME];
+	array[MAX_NAME] = aux;
+
+  }else{
+  	/* DETACH */
+  	if((inodeEntry.mode & INODE_DIR)){
+  		inodeEntry.refCount = inodeEntry.refCount - 2;
+  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  			return stat;
+  		}
+  	}else if((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK)){
+  		inodeEntry.refCount--;
+  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  			return stat;
+  		}
+  		if(inodeEntry.refCount==0){
+  			if((inodeEntry.mode & INODE_FILE)){
+  				if((stat = soHandleFileClusters(nInodeEnt, 0, FREE_CLEAN))){
+	  				return stat;
+	  			}
+  			}else{
+	  			if((stat = soHandleFileCluster(nInodeEnt, 0, FREE_CLEAN, NULL))){
+	  				return stat;
+	  			}
+  			}
+  			
+  			if((stat = soFreeInode(nInodeEnt))){
+  				return stat;
+  			}
+  		}
+  	}
+
+  	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+  		return stat;
+  	}
+
+  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+  		return stat;
+  	}
+
+  	memset(dc.info.de[idxDir % DPC].name,0, MAX_NAME+1);
+	dc.info.de[idxDir % DPC].nInode = NULL_INODE;
+
+  }
+  
+  if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+	return stat;
   }
 
-
-
-
-
+  if((stat = soStoreSuperBlock()) != 0){
+  	return stat;
+  }
 
   return 0;
 }
