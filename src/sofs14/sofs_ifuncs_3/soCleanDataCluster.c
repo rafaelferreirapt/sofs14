@@ -62,8 +62,8 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 {
   soColorProbe (415, "07;31", "soCleanDataCluster (%"PRIu32", %"PRIu32")\n", nInode, nLClust);
 	SOSuperBlock* p_sb;
-	SOInode* p_inode;
-	uint32_t stat,nblk,offset;
+	SOInode p_inode;
+	uint32_t stat;
 	//Obter informação do SuperBloco
 	if((stat=soLoadSuperBlock())!=0){
 		return stat;
@@ -77,7 +77,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return -EINVAL;
 	}
 
-	if((stat=soConvertRefInT(nInode,&nblk,&offset))!=0){
+	/*if((stat=soConvertRefInT(nInode,&nblk,&offset))!=0){
 		return stat;
 	}
 
@@ -86,28 +86,33 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	}
 	// obtençao de ponteiro para o bloco onde se encontra o Inode
 	p_inode=soGetBlockInT();
+	*/
 
+	if((stat=soReadInode(&p_inode,nInode,FDIN))!=0)
+	{
+		return stat;
+	}
 	//Se o inode livre no estado sujo for inconsistente
-	if((soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
+	if((soQCheckFDInode(p_sb,&p_inode))!=0){
 		return -EFDININVAL;
 	}
 
-	if(((stat=soQCheckFDInode(p_sb,&p_inode[offset])))!=0){
+	if(((stat=soQCheckFDInode(p_sb,&p_inode)))!=0){
 		return stat;
 	}
 
 	SODataClust* ref_clust;
 	// numero total de clusters que compoem o Inode
-	int total_clust=p_inode[offset].size/CLUSTER_SIZE;
+	int total_clust=p_inode.cluCount;
 	// contador que indica quantos clusters do Inode ja foram encontrados
     int count = 0;
-    int i,c;
+    int i = 0,c = 0;
 
 
     // array de referenciação directa
 	for(i=0;i<N_DIRECT;i++)
 	{
-		c=p_inode[offset].d[i];
+		c=p_inode.d[i];
 
 		if(c != NULL_CLUSTER)
 		{
@@ -133,16 +138,16 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		}			
 	}
 
-	int k;
+	int k = 0;
 	//Carregar cluster i1 de referência simplesmente indirecta para memória interna
-	if((stat=soLoadDirRefClust(p_sb->dZoneStart+((p_inode[offset].i1)*BLOCKS_PER_CLUSTER)))!=0)
+	if((stat=soLoadDirRefClust(p_sb->dZoneStart+((p_inode.i1)*BLOCKS_PER_CLUSTER)))!=0)
 	{
 		return stat;
 	}
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetDirRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
-	if((p_sb->dZoneStart+((p_inode[offset].i1)*BLOCKS_PER_CLUSTER)) == nLClust)
+	if((p_sb->dZoneStart+((p_inode.i1)*BLOCKS_PER_CLUSTER)) == nLClust)
 	{
 		for (k = 0; k < RPC; k++)
 		{
@@ -182,15 +187,20 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		}		
 	}
 	// carregar cluster de referencias I2 para a memoria interna
-	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+((p_inode[offset]).i2*BLOCKS_PER_CLUSTER)))!=0)
+	if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode.i2*BLOCKS_PER_CLUSTER)))!=0)
 	{
 		return stat;
 	}
 	ref_clust = soGetSngIndRefClust();
-	if((p_sb->dZoneStart+((p_inode[offset].i2)*BLOCKS_PER_CLUSTER)) == nLClust)
+	if((p_sb->dZoneStart+((p_inode.i2)*BLOCKS_PER_CLUSTER)) == nLClust)
 	{
 		for (k=0;k<RPC;k++)
 		{
+			if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode.i2*BLOCKS_PER_CLUSTER)))!=0)
+			{
+				return stat;
+			}
+			ref_clust=soGetSngIndRefClust();
 			if((p_sb->dZoneStart+(ref_clust->info.ref[k]*BLOCKS_PER_CLUSTER))!= NULL_CLUSTER)
 			{
 				if((stat=soLoadDirRefClust(p_sb->dZoneStart+((ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER)))!=0)
@@ -220,7 +230,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		for(k=0;k<RPC;k++)
 		{
 			// carregar cluster de referencias I2 para a memoria interna
-			if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+((p_inode[offset]).i2*BLOCKS_PER_CLUSTER)))!=0)
+			if((stat=soLoadSngIndRefClust(p_sb->dZoneStart+(p_inode.i2*BLOCKS_PER_CLUSTER)))!=0)
 			{
 				return stat;
 			}
