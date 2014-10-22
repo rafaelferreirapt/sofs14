@@ -84,8 +84,42 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 {
   soColorProbe (314, "07;31", "soRemDetachDirEntry (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
+  int stat;
+  SOInode inode;
 
-  /* insert your code here */
+  /*
+	Vou fazer load do inode, a função soReadInode já verifica se o número do inode
+	é valido ou não. O inode tem de estar em uso.
+  */
+  if((stat = soReadInode(&inode, nInodeDir, IUIN))){
+  	return stat;
+  }
 
-  return -ENOSYS;
+  if((stat = soLoadSuperBlock())){
+  	return stat;
+  }
+
+  SOSuperBlock *p_sb;
+  p_sb = soGetSuperBlock();
+  /* 
+	Com a soQCheckDirCont sabemos se o inode representa um diretório e se o conteudo é consistente 
+  */
+  if((stat = soQCheckDirCont(p_sb, &inode))){
+  	return stat;
+  }
+
+  /*
+	O eName tem de ser um base name e não um path. Tem de existir um dir com o name = eName
+	Vamos obter o nº do InodeEntry que procuramos com o eName. 
+  */
+  SOInode nInodeEntry;
+  uint32_t idxDir;
+
+  if((stat = soGetDirEntryByName(nInodeDir, eName, &nInodeEntry, &idxDir))){
+  	return stat;
+  }
+
+  
+
+  return 0;
 }
