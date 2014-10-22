@@ -112,14 +112,43 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 	O eName tem de ser um base name e não um path. Tem de existir um dir com o name = eName
 	Vamos obter o nº do InodeEntry que procuramos com o eName. 
   */
-  SOInode nInodeEntry;
-  uint32_t idxDir;
-
-  if((stat = soGetDirEntryByName(nInodeDir, eName, &nInodeEntry, &idxDir))){
+  uint32_t idxDir, nInodeEnt;
+  /*
+  	o soGetDirEntryByName tem de ter permissão de execução no diretório para o atravessar, já faz check
+  */
+  if((stat = soGetDirEntryByName(nInodeDir, eName, &nInodeEnt, &idxDir))){
   	return stat;
   }
 
+  /* 
+  	Sempre que a operação for remover e o tipo do inode associado à dir que vai ser removida for do tipo directory, a operação apenas pode ser executada se o diretório estiver vazio.
+  */
+  SOInode inodeEntry;
+  if((stat = soReadInode(&inodeEntry, nInodeEnt, IUIN))){
+  	return stat;
+  }
   
+  /* 
+  	Precisamos de permissões de escrita
+  */
+  if((stat = soAccessGranted(nInodeEnt, W))){
+  	return stat;
+  }
+
+  if(op == REM){
+  	if((inodeEntry.mode & INODE_DIR)){
+  		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
+  			return stat;
+  		}
+  	}else{
+  		
+  	}
+  }
+
+
+
+
+
 
   return 0;
 }
