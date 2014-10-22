@@ -64,10 +64,10 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 {
 	soColorProbe (613, "07;33", "soAllocDataCluster (%"PRIu32", %p)\n", nInode, p_nClust);
 
-	if(p_nClust == NULL)
-	{
-		return -EINVAL;
-	}
+	//if(p_nClust == NULL)
+	//{
+	//	return -EINVAL;
+	//}
 
 	SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
 	SODataClust cluster;		// Criar um cluster
