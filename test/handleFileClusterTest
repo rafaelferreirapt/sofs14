@@ -10,7 +10,8 @@
 4
 alloc
 
-showblock -D 6 zzz (nill) (nill) (0001)
+./showblock_sofs14 -D 6 zz 
+#OUTPUT ESPERADO: (nill) (nill) (0001)
 
 11
 1
