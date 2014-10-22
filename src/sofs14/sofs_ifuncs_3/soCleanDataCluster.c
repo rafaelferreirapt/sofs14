@@ -67,16 +67,15 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	//Obter informação do SuperBloco
 	if((stat=soLoadSuperBlock())!=0){
 		return stat;
-			}
+	}
 	//Ponteiro para superbloco
 	p_sb=soGetSuperBlock();
 
 	
 	//Verificar se nInode e nLClust são validos
 	if(nInode>=p_sb->iTotal || nInode<=0 || nLClust>=p_sb->dZoneTotal){
-
 		return -EINVAL;
-			}
+	}
 
 	if((stat=soConvertRefInT(nInode,&nblk,&offset))!=0){
 		return stat;
@@ -91,13 +90,11 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	//Se o inode livre no estado sujo for inconsistente
 	if((soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
 		return -EFDININVAL;
-
-				}
+	}
 
 	if(((stat=soQCheckFDInode(p_sb,&p_inode[offset])))!=0){
-
-					return stat;
-				}
+		return stat;
+	}
 
 	SODataClust* ref_clust;
 	// numero total de clusters que compoem o Inode
@@ -116,7 +113,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		{
 			if(c == nLClust)
 			{
-				perror("Handle1");
 				// limpeza o cluster de dados atraves da função HandleFileCluster
 				if((stat=soHandleFileCluster(nInode,i,CLEAN,NULL))!=0)
 				{
@@ -152,7 +148,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		{
 			if(ref_clust->info.ref[k]!=NULL_CLUSTER)
 			{
-				perror("Handle2");
 				if((stat=soHandleFileCluster(nInode,N_DIRECT+k,CLEAN,NULL))!=0)
 				{
 					return stat;
@@ -169,7 +164,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 			{
 				if(ref_clust->info.ref[k]==nLClust)
 				{
-					perror("Handle3");
 					if((stat=soHandleFileCluster(nInode,N_DIRECT+k,CLEAN,NULL))!=0)
 					{
 						return stat;
@@ -210,7 +204,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				{
 					if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 					{
-						perror("Handle4");
 						if((stat=soHandleFileCluster(nInode,N_DIRECT+(RPC*(k+1))+i,CLEAN,NULL))!=0)
 						{
 							return stat;
@@ -250,7 +243,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 					{
 						if(ref_clust->info.ref[i]!=NULL_CLUSTER)
 						{
-							perror("Handle5");
 							if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,CLEAN,NULL))!=0)
 							{
 								return stat;
@@ -277,7 +269,6 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 						{
 							if (ref_clust->info.ref[i] == nLClust)
 							{
-								perror("Handle6");
 								if((stat=soHandleFileCluster(nInode,N_DIRECT+((k+1)*RPC)+i,CLEAN,NULL))!=0)
 								{
 									return stat;
