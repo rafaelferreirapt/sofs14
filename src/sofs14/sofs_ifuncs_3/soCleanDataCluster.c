@@ -147,7 +147,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 	// ponteiro para custer que esteja na memoria interna
 	ref_clust=soGetDirRefClust();
 	// Cluster I1 de referenciação simplesmente indirecta
-	if((p_sb->dZoneStart+((p_inode.i1)*BLOCKS_PER_CLUSTER)) == nLClust)
+	if(p_inode.i1 == nLClust)
 	{
 		for (k = 0; k < RPC; k++)
 		{
@@ -192,7 +192,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 		return stat;
 	}
 	ref_clust = soGetSngIndRefClust();
-	if((p_sb->dZoneStart+((p_inode.i2)*BLOCKS_PER_CLUSTER)) == nLClust)
+	if(p_inode.i2 == nLClust)
 	{
 		for (k=0;k<RPC;k++)
 		{
@@ -201,7 +201,7 @@ int soCleanDataCluster (uint32_t nInode, uint32_t nLClust)
 				return stat;
 			}
 			ref_clust=soGetSngIndRefClust();
-			if((p_sb->dZoneStart+(ref_clust->info.ref[k]*BLOCKS_PER_CLUSTER))!= NULL_CLUSTER)
+			if(ref_clust->info.ref[k] != NULL_CLUSTER)
 			{
 				if((stat=soLoadDirRefClust(p_sb->dZoneStart+((ref_clust->info.ref[k])*BLOCKS_PER_CLUSTER)))!=0)
 				{
