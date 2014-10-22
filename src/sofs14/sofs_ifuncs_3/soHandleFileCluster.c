@@ -819,7 +819,9 @@ int soAttachLogicalCluster (SOSuperBlock *p_sb, uint32_t nInode, uint32_t clustI
   /*Numero fisico do cluster alocado*/
   NFClt = p_sb->dZoneStart + nLClust * BLOCKS_PER_CLUSTER;
 
-  if((stat = soHandleFileCluster(nInode, clustInd - 1, GET, &prev_ind))){
+  if(clustInd != 0){
+
+    if((stat = soHandleFileCluster(nInode, clustInd - 1, GET, &prev_ind))){
     return stat;
   }
 
