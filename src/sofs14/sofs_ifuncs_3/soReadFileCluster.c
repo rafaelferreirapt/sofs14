@@ -94,8 +94,8 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   pInode = soGetBlockInT();
 
   //Validacao de consistencia
-  if((error = soReadInode(pInode, nInode, IUIN)) != 0){
-    return error;
+  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
+    return stat;
   }
 
   //Obter o numero logico do cluster
