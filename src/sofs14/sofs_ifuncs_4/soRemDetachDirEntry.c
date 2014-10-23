@@ -114,8 +114,11 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   }
 
   /* 
-  	Precisamos de permissões de escrita
+  	Precisamos de permissões de escrita e execução
   */
+  if((stat = soAccessGranted(nInodeDir, X))){
+    return stat;
+  }
   if((stat = soAccessGranted(nInodeDir, W))){
   	return stat;
   }
@@ -146,11 +149,25 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
   			return stat;
   		}
-  		inodeEntry.refCount--;
-  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  			return stat;
-  		}
-  		if(inodeEntry.refCount==1){
+    }
+
+  	inodeEntry.refCount--;
+  	
+    if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  		return stat;
+  	}
+    if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
+    }
+
+    unsigned char *array = dc.info.de[idxDir % DPC].name;
+    char aux = array[0];
+    array[0] = array[MAX_NAME];
+    array[MAX_NAME] = aux;
+
+  	
+    if((inodeEntry.mode & INODE_DIR)){
+    	if(inodeEntry.refCount==1){
   			inodeEntry.refCount--;
   			if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
   				return stat;
@@ -164,10 +181,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   			inodeDir.refCount--;
   		}
   	}else if(((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK))){
-  		inodeEntry.refCount--;
-  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  			return stat;
-  		}
   		if(inodeEntry.refCount == 0){
   			if((inodeEntry.mode & INODE_FILE)){
   				if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
@@ -189,14 +202,7 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   		return stat;
   	}
 
-  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
-  		return stat;
-  	}
-
-  	unsigned char *array = dc.info.de[idxDir % DPC].name;
-	char aux = array[0];
-	array[0] = array[MAX_NAME];
-	array[MAX_NAME] = aux;
+  	
 
   }else{
   	/* DETACH */
