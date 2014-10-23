@@ -152,19 +152,9 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
     }
 
   	inodeEntry.refCount--;
-  	
-    if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+  	if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
   		return stat;
   	}
-    if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
-      return stat;
-    }
-
-    unsigned char *array = dc.info.de[idxDir % DPC].name;
-    char aux = array[0];
-    array[0] = array[MAX_NAME];
-    array[MAX_NAME] = aux;
-
   	
     if((inodeEntry.mode & INODE_DIR)){
     	if(inodeEntry.refCount==1){
@@ -175,6 +165,7 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   			if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
   				return stat;
   			}
+        
   			if((stat = soFreeInode(nInodeEnt))){
   				return stat;
   			}
@@ -197,12 +188,25 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   			}
   		}
   	}
-  	
+
   	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
   		return stat;
   	}
+    soColorProbe (314, "07;31", "AQUI (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
-  	
+  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
+    }
+
+    unsigned char *array = dc.info.de[idxDir % DPC].name;
+    char aux = array[0];
+    array[0] = array[MAX_NAME];
+    array[MAX_NAME] = aux;
+
+    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
+    }
+    soColorProbe (314, "07;31", "ATE (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
   }else{
   	/* DETACH */
@@ -242,12 +246,11 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	}
 
   	memset(dc.info.de[idxDir % DPC].name,0, MAX_NAME+1);
-	dc.info.de[idxDir % DPC].nInode = NULL_INODE;
+	  dc.info.de[idxDir % DPC].nInode = NULL_INODE;
 
-  }
-  
-  if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
-	return stat;
+    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
+    }
   }
 
   if((stat = soStoreSuperBlock()) != 0){
