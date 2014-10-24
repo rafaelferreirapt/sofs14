@@ -113,6 +113,10 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	return stat;
   }
 
+  if((stat = soStoreSuperBlock()) != 0){
+    return stat;
+  }
+
   /* 
   	Precisamos de permissões de escrita e execução
   */
@@ -143,12 +147,24 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	return stat;
   }
   
-
   if(op == REM){
   	if((inodeEntry.mode & INODE_DIR)){
   		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
   			return stat;
   		}
+    }
+
+    if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
+    }
+
+    unsigned char *array = dc.info.de[idxDir % DPC].name;
+    char aux = array[0];
+    array[0] = array[MAX_NAME];
+    array[MAX_NAME] = aux;
+
+    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+      return stat;
     }
 
   	inodeEntry.refCount--;
@@ -158,17 +174,16 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	
     if((inodeEntry.mode & INODE_DIR)){
     	if(inodeEntry.refCount==1){
-  			inodeEntry.refCount--;
-  			if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  				return stat;
-  			}
   			if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
   				return stat;
   			}
         
+        soColorProbe (314, "07;31", "inconsistency (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
+
   			if((stat = soFreeInode(nInodeEnt))){
   				return stat;
   			}
+
   			inodeDir.refCount--;
   		}
   	}else if(((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK))){
@@ -192,21 +207,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
   		return stat;
   	}
-    soColorProbe (314, "07;31", "AQUI (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
-
-  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
-      return stat;
-    }
-
-    unsigned char *array = dc.info.de[idxDir % DPC].name;
-    char aux = array[0];
-    array[0] = array[MAX_NAME];
-    array[MAX_NAME] = aux;
-
-    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
-      return stat;
-    }
-    soColorProbe (314, "07;31", "ATE (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
   }else{
   	/* DETACH */
@@ -251,10 +251,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
     if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
       return stat;
     }
-  }
-
-  if((stat = soStoreSuperBlock()) != 0){
-  	return stat;
   }
 
   return 0;
