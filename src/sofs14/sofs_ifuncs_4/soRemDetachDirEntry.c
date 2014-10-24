@@ -178,8 +178,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   				return stat;
   			}
         
-        soColorProbe (314, "07;31", "inconsistency (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
-
   			if((stat = soFreeInode(nInodeEnt))){
   				return stat;
   			}
@@ -245,7 +243,7 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   		return stat;
   	}
 
-  	memset(dc.info.de[idxDir % DPC].name,0, MAX_NAME+1);
+  	memset(dc.info.de[idxDir % DPC].name, 0, MAX_NAME+1);
 	  dc.info.de[idxDir % DPC].nInode = NULL_INODE;
 
     if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
