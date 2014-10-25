@@ -164,8 +164,14 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		char path[MAX_PATH+1];
 		char *d_name;
 		char *b_name;
+		uint32_t *p_idx;
 		
 		SOSuperBlock *p_sb;
+		if((error=soLoadSuperBlock())!=0)
+		{
+			return error;
+		}
+		p_sb=soGetSuperBlock();
 
 		strcpy(save_ePath,ePath);
 		
@@ -235,13 +241,13 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		}
 
 		//Verificar permissões de execução
-		if((error=soAccesGranted(*p_nInodeDir,X))!=0)
+		if((error=soAccessGranted(*p_nInodeDir,X))!=0)
 		{
 				return error;
 		}
 
 		//Obter nome da entrada de directorio
-		if((error=soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,NULL))!=0)
+		if((error=soGetDirEntryByName(inode,b_name,p_nInodeEnt,&p_idx))!=0)
 		{
 			return error;
 		}
@@ -268,20 +274,20 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 			nSymLinks = 1;
 
 		//Se houver mais que um atalho, ver permissões de execução e leitura
-		if((error=soAccesGranted(*p_nInodeEnt,R+X))!=0)
+		if((error=soAccessGranted(*p_nInodeEnt,R+X))!=0)
 		{
 				return error;
 		}
 
 		//Ler cluster correspondente à entrada de directório	
-		if((error=soReadFileCluster(*p_nInodeEnt,0,&buff))!=0)
+		if((error=soReadFileCluster(*p_nInodeEnt,p_idx/DPC,&buff))!=0)
 		{
 			return error;
 		}
 
 		//Carregar para data conteudo do cluster correspondente à entrada de directório
-		char *data=buff.info.data; 
-		strncpy(path,data,MAX_PATH+1);
+		//char *data=buff.info.data; 
+		strncpy(path,buff.info.de[p_idx%DPC].name,MAX_PATH+1);
 
 		//Guardar em oldNInodeDir o valor de *p_nInodeDir(onde ficou antes do atalho)
 		oldNInodeDir=*p_nInodeDir;
