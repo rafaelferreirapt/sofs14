@@ -79,8 +79,6 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
   		int error;
   		nSymLinks=0;
   		oldNInodeDir=0;
-  		uint32_t nInode_Dir;
-  		uint32_t nInode_Ent;
   		//Ponteiro para o string associado ao parametro epath não pode ser nulo
   		if(ePath==NULL)
   		{
@@ -103,7 +101,7 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 				}
 
 		// Atravessar caminho para obter DirEntry
-		if((error=soTraversePath(ePath,&nInode_Dir,&nInode_Ent))!=0)
+		if((error=soTraversePath(ePath,p_nInodeDir,p_nInodeEnt))!=0)
 		{
 			return error;
 		}
@@ -111,12 +109,12 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 
 		if(p_nInodeDir!=NULL){
 
-			*p_nInodeDir=nInode_Dir;
+			*p_nInodeDir=0;
 		}
 
 		if(p_nInodeEnt!=NULL)
 		{
-			*p_nInodeEnt=nInode_Ent;
+			*p_nInodeEnt=0;
 		}
 
 
@@ -164,7 +162,8 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		char path[MAX_PATH+1];
 		char *d_name;
 		char *b_name;
-		uint32_t *p_idx;
+		uint32_t p_idx;
+		
 		
 		SOSuperBlock *p_sb;
 		if((error=soLoadSuperBlock())!=0)
@@ -247,7 +246,7 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		}
 
 		//Obter nome da entrada de directorio
-		if((error=soGetDirEntryByName(inode,b_name,p_nInodeEnt,&p_idx))!=0)
+		if((error=soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,&p_idx))!=0)
 		{
 			return error;
 		}
@@ -287,7 +286,9 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 
 		//Carregar para data conteudo do cluster correspondente à entrada de directório
 		//char *data=buff.info.data; 
-		strncpy(path,buff.info.de[p_idx%DPC].name,MAX_PATH+1);
+	
+		//strncpy(path,buff.info.data,MAX_PATH+1);
+		memcpy(path,buff.info.data,MAX_PATH+1);
 
 		//Guardar em oldNInodeDir o valor de *p_nInodeDir(onde ficou antes do atalho)
 		oldNInodeDir=*p_nInodeDir;
@@ -297,6 +298,11 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 					return error;
 }
 
+		}
+
+		if((error=soStoreSuperBlock())!=0)
+		{
+			return error;
 		}
 
 
