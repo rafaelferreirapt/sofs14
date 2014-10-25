@@ -13,14 +13,14 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "sofs_superblock.h"
-#include "sofs_inode.h"
-#include "sofs_direntry.h"
-#include "sofs_basicoper.h"
-#include "sofs_basicconsist.h"
-#include "sofs_ifuncs_1.h"
-#include "sofs_ifuncs_2.h"
-#include "sofs_ifuncs_3.h"
+#include "../sofs_superblock.h"
+#include "../sofs_inode.h"
+#include "../sofs_direntry.h"
+#include "../sofs_basicoper.h"
+#include "../sofs_basicconsist.h"
+#include "../sofs_ifuncs_1.h"
+#include "../sofs_ifuncs_2.h"
+#include "../sofs_ifuncs_3.h"
 
 /* Allusion to external function */
 
@@ -31,12 +31,11 @@ int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nIno
 int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt);
 
 /** \brief Number of symbolic links in the path */
-
-/* static uint32_t nSymLinks = 0; */
+ static uint32_t nSymLinks = 0;
 
 /** \brief Old directory inode number */
 
-/* static uint32_t oldNInodeDir = 0; */
+static uint32_t oldNInodeDir = 0; 
 
 /**
  *  \brief Get an entry by path.
@@ -77,10 +76,54 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
   soColorProbe (311, "07;31", "soGetDirEntryByPath (\"%s\", %p, %p)\n", ePath, p_nInodeDir, p_nInodeDir);
+  		int error;
+  		nSymLinks=0;
+  		oldNInodeDir=0;
+  		uint32_t nInode_Dir;
+  		uint32_t nInode_Ent;
+  		//Ponteiro para o string associado ao parametro epath não pode ser nulo
+  		if(ePath==NULL)
+  		{
+
+  			return -EINVAL;
+  		}
+
+ 		// O caminho tem de ser absoluto  		
+		if(ePath[0]!='/')
+		{
+			return -ERELPATH;
+
+		}
+
+		//Verificar se o caminho ou qualquer dos seus componentes excede o tamanho permitido
+		if(strlen(ePath)>MAX_PATH)
+				{
+
+				return ENAMETOOLONG;
+				}
+
+		// Atravessar caminho para obter DirEntry
+		if((error=soTraversePath(ePath,&nInode_Dir,&nInode_Ent))!=0)
+		{
+			return error;
+		}
+
+
+		if(p_nInodeDir!=NULL){
+
+			*p_nInodeDir=nInode_Dir;
+		}
+
+		if(p_nInodeEnt!=NULL)
+		{
+			*p_nInodeEnt=nInode_Ent;
+		}
+
+
 
   /* insert your code here */
 
-  return -ENOSYS;
+  return 0;
 }
 
 /**
@@ -111,8 +154,147 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 
 int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
+		
+		char save_ePath[MAX_PATH+1];
+		char save2_ePath[MAX_PATH+1];
+		int error;
+		SOInode inode;
+		uint32_t status;
+		SODataClust buff;
+		char path[MAX_PATH+1];
+		char *d_name;
+		char *b_name;
+		
+		SOSuperBlock *p_sb;
 
-  /* insert your code here */
+		strcpy(save_ePath,ePath);
+		
+		//dirname
+		d_name=dirname(save_ePath); 
 
-  return -ENOSYS;
+		//Salvaguarda de ePath
+		strcpy(save2_ePath,ePath); 
+
+		//basename
+		b_name=basename(save2_ePath);	
+
+		//Verificar se o nome do basename não excede o maximo permitido
+		if(strlen(b_name)>MAX_NAME)
+		{
+			return ENAMETOOLONG;
+		}
+
+
+		//Se dirname é diferente de '/' e '.' continua a percorrer o caminho
+		if((strcmp(d_name,".")!=0) && (strcmp(d_name,"/")!=0))
+		{
+			// Atravessar caminho para obter DirEntry
+			if((error=soTraversePath(d_name,p_nInodeDir,p_nInodeEnt))!=0)
+				{
+				return error;
+				}
+
+
+		//Atribui a *p_nInodeDir *p_nInodeEnt 		
+		*p_nInodeDir=*p_nInodeEnt;
+		}
+
+		//Se dirname='.' *p_nInodeDir=0
+		if(strcmp(d_name,".")==0)
+		{
+			*p_nInodeDir=oldNInodeDir;
+		}
+
+		//Se dirname='/' *p_nInodeDir=0
+		if(strcmp(d_name,"/")==0)
+		{
+			*p_nInodeDir=0;	
+		}
+		//Se basename='/', tem de ser alterado para '.'
+		if(strcmp(b_name,"/")==0)
+		{
+			strcpy(b_name,".");	
+		}
+
+		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
+		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
+			return status;
+		}
+
+		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros válidos
+		if((error=soReadInode(&inode,*p_nInodeDir,status))!=0)
+		{
+			return error;
+		}
+
+
+		//Ver se o no-i corresponde a um directorio
+		if((inode.mode & INODE_DIR)!=INODE_DIR)
+		{
+			return -ENOTDIR;
+		}
+
+		//Verificar permissões de execução
+		if((error=soAccesGranted(*p_nInodeDir,X))!=0)
+		{
+				return error;
+		}
+
+		//Obter nome da entrada de directorio
+		if((error=soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,NULL))!=0)
+		{
+			return error;
+		}
+		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
+		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
+		return status;
+		}
+		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros vàlidos
+		if((error=soReadInode(&inode,*p_nInodeEnt,status))!=0)
+		{
+			return error;
+		}
+
+
+		//Ver se o no-i corresponde a um atalho
+		if((inode.mode & INODE_SYMLINK)==INODE_SYMLINK)
+			{
+				//Se for só um atalho para aqui o programa
+				if(nSymLinks==1){
+				return -ELOOP;
+			}
+
+				if(nSymLinks == 0)
+			nSymLinks = 1;
+
+		//Se houver mais que um atalho, ver permissões de execução e leitura
+		if((error=soAccesGranted(*p_nInodeEnt,R+X))!=0)
+		{
+				return error;
+		}
+
+		//Ler cluster correspondente à entrada de directório	
+		if((error=soReadFileCluster(*p_nInodeEnt,0,&buff))!=0)
+		{
+			return error;
+		}
+
+		//Carregar para data conteudo do cluster correspondente à entrada de directório
+		char *data=buff.info.data; 
+		strncpy(path,data,MAX_PATH+1);
+
+		//Guardar em oldNInodeDir o valor de *p_nInodeDir(onde ficou antes do atalho)
+		oldNInodeDir=*p_nInodeDir;
+
+		if((error=soTraversePath(path,p_nInodeDir,p_nInodeEnt))!=0){
+
+					return error;
+}
+
+		}
+
+
+/* insert your code here */
+
+  return 0;
 }
