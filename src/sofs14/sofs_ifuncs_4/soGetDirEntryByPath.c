@@ -76,9 +76,10 @@ static uint32_t oldNInodeDir = 0;
 int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
   soColorProbe (311, "07;31", "soGetDirEntryByPath (\"%s\", %p, %p)\n", ePath, p_nInodeDir, p_nInodeDir);
-  		int error;
-  		nSymLinks=0;
-  		oldNInodeDir=0;
+  		int error; //Variável para verificação de erros
+  		nSymLinks=0;	//Variavel para nºtotal de atalhos
+  		oldNInodeDir=0; //Variavel para armazenar o nº do no onde se ficou antes do aparecimento de um atalho
+  		
   		//Ponteiro para o string associado ao parametro epath não pode ser nulo
   		if(ePath==NULL)
   		{
@@ -153,25 +154,30 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
 		
-		char save_ePath[MAX_PATH+1];
-		char save2_ePath[MAX_PATH+1];
-		int error;
-		SOInode inode;
-		uint32_t status;
-		SODataClust buff;
-		char path[MAX_PATH+1];
-		char *d_name;
-		char *b_name;
-		uint32_t p_idx;
+		char save_ePath[MAX_PATH+1]; //Variavel auxiliar para salvaguarda de informação
+		char save2_ePath[MAX_PATH+1];//Variavel auxiliar para salvaguarda de informação
+		int error;					//Variavel para verificação de erros
+		SOInode inode;				//Variável do tipo SOInode
+		uint32_t status;			//Verificação do estado do inode em uso
+		SODataClust buff;			//Variavel do tipo SODataCluster
+		char path[MAX_PATH+1];		//String auxiliar path
+		char *d_name;				//dirname
+		char *b_name;				//basename
+		uint32_t p_idx;			  	//Indice para entrada de directório
 		
 		
 		SOSuperBlock *p_sb;
+
+		//Carregar superbloco para memoria interna
 		if((error=soLoadSuperBlock())!=0)
 		{
 			return error;
 		}
+
+		//Obter ponteiro para superbloco
 		p_sb=soGetSuperBlock();
 
+		
 		strcpy(save_ePath,ePath);
 		
 		//dirname
@@ -223,7 +229,7 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 
 		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
 		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
-			return status;
+			return -ELDCININVAL;
 		}
 
 		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros válidos
@@ -232,6 +238,10 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 			return error;
 		}
 
+		//Verificar consistência do directório
+		if((soQCheckDirCont(p_sb,&inode))!=0){
+			return -EDIRINVAL;
+		}
 
 		//Ver se o no-i corresponde a um directorio
 		if((inode.mode & INODE_DIR)!=INODE_DIR)
@@ -240,26 +250,35 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		}
 
 		//Verificar permissões de execução
-		if((error=soAccessGranted(*p_nInodeDir,X))!=0)
+		if((soAccessGranted(*p_nInodeDir,X))!=0)
 		{
-				return error;
+				return -EACCES;
 		}
 
 		//Obter nome da entrada de directorio
-		if((error=soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,&p_idx))!=0)
+		if((soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,&p_idx))!=0)
 		{
-			return error;
+			return -ENOENT;
 		}
+
+
+
 		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
 		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
-		return status;
+			return status;
 		}
+
+		
 		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros vàlidos
 		if((error=soReadInode(&inode,*p_nInodeEnt,status))!=0)
 		{
 			return error;
 		}
 
+		//Verificar consistência da entrada de directório
+		if((soQCheckDirCont(p_sb,&inode))!=0){
+			return -EDEINVAL;
+		}
 
 		//Ver se o no-i corresponde a um atalho
 		if((inode.mode & INODE_SYMLINK)==INODE_SYMLINK)
@@ -283,9 +302,6 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		{
 			return error;
 		}
-
-		//Carregar para data conteudo do cluster correspondente à entrada de directório
-		//char *data=buff.info.data; 
 	
 		//strncpy(path,buff.info.data,MAX_PATH+1);
 		memcpy(path,buff.info.data,MAX_PATH+1);
@@ -299,11 +315,14 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 }
 
 		}
-
-		if((error=soStoreSuperBlock())!=0)
+		//Enviar informação do superbloco para o dispositivo
+		if((soStoreSuperBlock())!=0)
 		{
-			return error;
+			return -ELIBBAD;
 		}
+
+
+
 
 
 /* insert your code here */
