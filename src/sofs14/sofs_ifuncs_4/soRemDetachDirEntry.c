@@ -88,9 +88,21 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	return -EINVAL;
   }
 
-  int stat;
-  SOInode inodeDir;
+  uint32_t idxDir, nInodeEnt;
+  int stat, i;
+  SOInode inodeDir, inodeEntry;
   SODataClust dc;
+  SOSuperBlock *p_sb;
+
+  /* 
+    Precisamos de permissões de escrita e execução
+  */
+  if((stat = soAccessGranted(nInodeDir, X))){
+    return stat;
+  }
+  if((stat = soAccessGranted(nInodeDir, W))){
+    return stat;
+  }
 
   /*
 	Vou fazer load do inode, a função soReadInode já verifica se o número do inode
@@ -104,7 +116,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   	return stat;
   }
 
-  SOSuperBlock *p_sb;
   p_sb = soGetSuperBlock();
   /* 
 	Com a soQCheckDirCont sabemos se o inode representa um diretório e se o conteudo é consistente 
@@ -117,21 +128,12 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
     return stat;
   }
 
-  /* 
-  	Precisamos de permissões de escrita e execução
-  */
-  if((stat = soAccessGranted(nInodeDir, X))){
-    return stat;
-  }
-  if((stat = soAccessGranted(nInodeDir, W))){
-  	return stat;
-  }
 
   /*
 	O eName tem de ser um base name e não um path. Tem de existir um dir com o name = eName
 	Vamos obter o nº do InodeEntry que procuramos com o eName. 
   */
-  uint32_t idxDir, nInodeEnt;
+
   /*
   	o soGetDirEntryByName tem de ter permissão de execução no diretório para o atravessar, já faz check
   */
@@ -142,7 +144,6 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   /* 
   	Sempre que a operação for remover e o tipo do inode associado à dir que vai ser removida for do tipo directory, a operação apenas pode ser executada se o diretório estiver vazio.
   */
-  SOInode inodeEntry;
   if((stat = soReadInode(&inodeEntry, nInodeEnt, IUIN))){
   	return stat;
   }
@@ -152,55 +153,44 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
   			return stat;
   		}
+      //remove reference a ela propria
+      inodeEntry.refCount--;
+      //remove reference ..
+      inodeDir.refCount--;
     }
 
-    if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
+    if((stat = soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
       return stat;
     }
 
-    unsigned char *array = dc.info.de[idxDir % DPC].name;
-    char aux = array[0];
-    array[0] = array[MAX_NAME];
-    array[MAX_NAME] = aux;
+    dc.info.de[idxDir%DPC].name[MAX_NAME] = dc.info.de[idxDir%DPC].name[0];
+    dc.info.de[idxDir%DPC].name[0]='\0';
 
+    inodeEntry.refCount--;
+    
     if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
       return stat;
     }
 
-  	inodeEntry.refCount--;
-  	if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  		return stat;
-  	}
-  	
-    if((inodeEntry.mode & INODE_DIR)){
-    	if(inodeEntry.refCount==1){
-  			if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
-  				return stat;
-  			}
+  	//se refcount == 0 temos de fazer free aos data clusters e aos inodes
+    if(inodeEntry.refCount == 0){  
+      if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
+        return stat;
+      }
+      
+      if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+        return stat;
+      }
+      
+      if((stat = soFreeInode(nInodeEnt))){
+        return stat;
+      }
         
-  			if((stat = soFreeInode(nInodeEnt))){
-  				return stat;
-  			}
-
-  			inodeDir.refCount--;
-  		}
-  	}else if(((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK))){
-  		if(inodeEntry.refCount == 0){
-  			if((inodeEntry.mode & INODE_FILE)){
-  				if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
-	  				return stat;
-	  			}
-  			}else{
-	  			if((stat = soHandleFileCluster(nInodeEnt, 0, FREE, NULL))){
-	  				return stat;
-	  			}
-  			}
-  			
-  			if((stat = soFreeInode(nInodeEnt))){
-  				return stat;
-  			}
-  		}
-  	}
+    }else{ 
+      if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+        return stat;
+      }
+    }
 
   	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
   		return stat;
@@ -208,47 +198,35 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 
   }else{
   	/* DETACH */
-  	if((inodeEntry.mode & INODE_DIR)){
-  		inodeEntry.refCount = inodeEntry.refCount - 2;
-  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  			return stat;
-  		}
-  	}else if((inodeEntry.mode & INODE_FILE) || (inodeEntry.mode & INODE_SYMLINK)){
-  		inodeEntry.refCount--;
-  		if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-  			return stat;
-  		}
-  		if(inodeEntry.refCount==0){
-  			if((inodeEntry.mode & INODE_FILE)){
-  				if((stat = soHandleFileClusters(nInodeEnt, 0, FREE_CLEAN))){
-	  				return stat;
-	  			}
-  			}else{
-	  			if((stat = soHandleFileCluster(nInodeEnt, 0, FREE_CLEAN, NULL))){
-	  				return stat;
-	  			}
-  			}
-  			
-  			if((stat = soFreeInode(nInodeEnt))){
-  				return stat;
-  			}
-  		}
-  	}
+  	if((inodeEntry.mode & INODE_DIR) == INODE_DIR){
+      inodeEntry.refCount--;
+      inodeDir.refCount--;
+    }
 
-  	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
-  		return stat;
-  	}
+    if((stat=soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
+      return stat; 
+    }
+               
+    inodeEntry.refCount--;
 
-  	if((stat = soReadFileCluster(nInodeDir, idxDir/DPC, &dc))){
-  		return stat;
-  	}
+    for(i = 0; i < MAX_NAME; i++){
+      dc.info.de[idxDir % DPC].name[i] = '\0';
+    }
+    
+    dc.info.de[idxDir % DPC].nInode = NULL_INODE;
 
-  	memset(dc.info.de[idxDir % DPC].name, 0, MAX_NAME+1);
-	  dc.info.de[idxDir % DPC].nInode = NULL_INODE;
-
-    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+    if((stat = soWriteFileCluster(nInodeDir, (idxDir / DPC), &dc))){
       return stat;
     }
+    
+    if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+      return stat;
+    }
+  
+    if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+      return stat;
+    }
+            
   }
 
   return 0;
