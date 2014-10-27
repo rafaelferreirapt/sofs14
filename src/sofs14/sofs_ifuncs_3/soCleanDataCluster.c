@@ -11,13 +11,13 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "../sofs_superblock.h"
-#include "../sofs_inode.h"
-#include "../sofs_datacluster.h"
-#include "../sofs_basicoper.h"
-#include "../sofs_basicconsist.h"
-#include "../sofs_ifuncs_1.h"
-#include "../sofs_ifuncs_2.h"
+#include "sofs_superblock.h"
+#include "sofs_inode.h"
+#include "sofs_datacluster.h"
+#include "sofs_basicoper.h"
+#include "sofs_basicconsist.h"
+#include "sofs_ifuncs_1.h"
+#include "sofs_ifuncs_2.h"
 
 /** \brief operation get the physical number of the referenced data cluster */
 #define GET         0
