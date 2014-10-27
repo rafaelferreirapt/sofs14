@@ -13,14 +13,14 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "../sofs_superblock.h"
-#include "../sofs_inode.h"
-#include "../sofs_direntry.h"
-#include "../sofs_basicoper.h"
-#include "../sofs_basicconsist.h"
-#include "../sofs_ifuncs_1.h"
-#include "../sofs_ifuncs_2.h"
-#include "../sofs_ifuncs_3.h"
+#include "sofs_superblock.h"
+#include "sofs_inode.h"
+#include "sofs_direntry.h"
+#include "sofs_basicoper.h"
+#include "sofs_basicconsist.h"
+#include "sofs_ifuncs_1.h"
+#include "sofs_ifuncs_2.h"
+#include "sofs_ifuncs_3.h"
 
 /* Allusion to external functions */
 
@@ -71,7 +71,7 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   int stat;
   uint32_t p_idx;
   uint32_t p_idx1;
-  uint32_t p_nInodeEnt;
+  //uint32_t p_nInodeEnt;
 
   // obter informação do superbloco
   if((stat=soLoadSuperBlock())!=0)
@@ -82,7 +82,7 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   p_sb=soGetSuperBlock();
 
   // verificação de validade do iNode
-  if(nInodeDir>=p_sb->iTotal || nInodeDir <= 0)
+  if(nInodeDir>=p_sb->iTotal || nInodeDir < 0)
   {
   	return -EINVAL;
   }
@@ -104,7 +104,6 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   {
   	return -ENAMETOOLONG;
   }
-
   /* verificaçã odas string, estas nao podem
   conter '/' no seu conteudo 
   char test;
@@ -130,39 +129,43 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   {
   	return stat;
   }
-  // verificação de permissoes de escrita
-  if((stat=soAccessGranted(nInodeDir,W))!=0)
-  {
-  	return -EPERM;
-  }
   // verificação de permissoes de execução
   if((stat=soAccessGranted(nInodeDir,X))!=0)
   {
   	return -EACCES;
   }
+  // verificação de permissoes de escrita
+  if((stat=soAccessGranted(nInodeDir,W))!=0)
+  {
+  	return -EPERM;
+  }
 
   // verificação se o inodeDir e um directorio
-  if((inode.mode & INODE_DIR)==0)
+  if((inode.mode & INODE_DIR)!= INODE_DIR)
   {
   	return -ENOTDIR;
   }
-
+  /*if((stat=soQCheckDirCont(p_sb,&inode))!=0)
+  {
+    return stat;
+  }
+  perror("antesQcheck");*/
   //verificação se o novo nome a alterar existe
-  stat=soGetDirEntryByName(nInodeDir,oldName,&p_nInodeEnt,&p_idx);
+  stat=soGetDirEntryByName(nInodeDir,oldName,NULL,&p_idx);
   if(stat != 0)
   {
     return stat;
   }
 
-  stat=soGetDirEntryByName(nInodeDir,newName,&p_nInodeEnt,&p_idx1);
-  if(stat != -ENOENT)
+  stat=soGetDirEntryByName(nInodeDir,newName,NULL,&p_idx1);
+  if(stat == 0)
   {
     return -EEXIST;
   }
-  if(stat != 0)
+  /*if(stat != 0)
   {
     return stat;
-  }
+  }*/
 
   /* vamos carregar o cluster que possui a entrada de directorio que pretendemos renomear*/
   if((stat=soReadFileCluster(nInodeDir,p_idx/DPC, &dirClust))!=0)
@@ -170,7 +173,13 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   	return stat;
   }
   // copiar nova string para a entrada onde se encontrava o oldName
-  memcpy(&dirClust.info.de[p_idx%DPC].name,newName,MAX_NAME+1);
+  //memcpy((char*)dirClust.info.de[p_idx%DPC].name,(char*)newName,MAX_NAME+1);
+  int i = 0;
+  for(i=0;i < MAX_NAME+1;i++)
+  {
+    dirClust.info.de[p_idx%DPC].name[i]=0;
+  }
+  strcpy((char*)dirClust.info.de[p_idx%DPC].name,(char*)newName);
   if((stat=soWriteFileCluster(nInodeDir,p_idx/DPC, &dirClust))!=0)
   {
   	return stat;
