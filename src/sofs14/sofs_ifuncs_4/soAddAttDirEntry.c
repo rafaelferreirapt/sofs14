@@ -91,7 +91,105 @@ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt,
   soColorProbe (313, "07;31", "soAddAttDirEntry (%"PRIu32", \"%s\", %"PRIu32", %"PRIu32")\n", nInodeDir,
                 eName, nInodeEnt, op);
 
-  /* insert your code here */
-  
-  return -ENOSYS;
+  	int stat;
+  	SOSuperBlock *p_sosb;
+  	SOInode *pInodeDir;
+  	uint32_t *pIdx, outVal, clustIdx, dirEntryIdx;
+
+  	//Load do SuperBlock
+  	if((stat = soLoadSuperBlock())!=0){
+    	return stat;
+  	}
+
+  	//Obter o ponteiro para o conteudo do SuperBlock
+  	p_sosb = soGetSuperBlock();
+
+  	/*****VALIDACOES*****/
+  	if(((op != ATTACH) && (op != ADD)) || (nInodeDir > p_sosb->itotal) || (nInodeEnt > p_sosb->itotal) || (eName == NULL) || (strlen(eName)==0) ){
+  		return -EINVAL;
+  	}
+
+  	//Validacao do nome
+  	if(strlen(eName) > MAX_NAME){
+  		return -ENAMETOOLONG;
+  	}
+  	/*
+  	strcpy(tempName,eName);
+  	strcpy(tempName, basename(tempName));
+
+  	if(strcmp(eNameTmp, eName)!=0)
+	return -EINVAL;
+	*/
+
+	//Leitura e validacao do inode
+  	if((stat=soReadInode(pInodeDir, nInodeDir))!=0){
+		return stat;		
+  	}
+
+  	if((inodeDir->mode & INODE_DIR) != INODE_DIR){
+		return -ENOTDIR;
+  	}
+
+  	//Verificacao de permicoes de leitura e escrita
+  	if((stat=soAccessGranted(nInodeDir,X))!=0){
+		return -EACCES;
+  	}
+
+  	if((stat=soAccessGranted(nInodeDir,W))!=0){
+		return -EPERM;
+  	}
+
+  	//Ver se ja atingiu tamanho maximo
+  	if(pInodeDir->size >= MAX_FILE_SIZE){
+		return -EFBIG;
+  	}
+
+  	/*verifica se podem ser colocadas mais referencias
+ 	if(inodeDir.refcount == 0xFFFF){
+		return -EMLINK;  
+ 	}*/
+
+	if((stat = soGetDirEntryByName(nInodeDir,eName,NULL, pIdx))==0){
+		return -EEXIST;
+	}
+	
+	clustIdx  = pIdx/DPC;
+  	dirEntryIdx = pIdx%DPC;
+
+  	/*get do data cluster com a entrada de diretorio*/
+  	if((ret=soHandleFileCluster(nInodeDir,clustIdx,GET,&outVal))!=0){
+		return ret;
+  	}
+
+  	 /*so aloca o cluster se nao estiver alocado*/
+    if(&pOutVal==NULL_CLUSTER)
+    {
+        if((ret=soHandleFileCluster(nInodeDir,clustInd,ALLOC,&p_outVal))!=0)
+            return ret;
+        
+        if((ret=soReadFileCluster(nInodeDir,clustInd,&dc))!=0)
+            return ret;
+        
+        /* preenchimento de todas as entradas de diretorio do datacluster*/
+        for(i=0; i<DPC; i++)
+        {
+            dc.de[i].nInode = NULL_INODE;
+            memset(&(dc.de[i].name),0x00, MAX_NAME+1);
+        }
+        
+        if((ret=soWriteFileCluster(nInodeDir,clustInd,&dc))!=0)
+            return ret;
+        
+        /*atualizacao do tamanho do inode*/
+        if((ret=soReadInode(&inodeDir, nInodeDir))!=0)
+            return ret;
+        
+        inodeDir.size += sizeof(SODirEntry)*DPC;
+        
+        if((ret=soWriteInode(&inodeDir, nInodeDir))!=0)
+            return ret;
+    }
+
+
+  return 0;
 }
