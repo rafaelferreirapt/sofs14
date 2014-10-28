@@ -64,7 +64,7 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (412, "07;31", "soWriteFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  int error;
+  int stat;
   uint32_t nLogicClust;
   SODataClust cluster;
   SOInode *pInode;
@@ -72,8 +72,8 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   uint32_t nBlk, offset;
 
   //Load do SuperBlock
-  if((error = soLoadSuperBlock()) != 0){
-    return error;
+  if((stat = soLoadSuperBlock()) != 0){
+    return stat;
   }
 
   //Obter o ponteiro para o conteudo do SuperBlock
@@ -94,36 +94,44 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   pInode = soGetBlockInT();
 
-  //Validacao de consistencia
-  if((error = soReadInode(pInode, nInode, IUIN)) != 0){
-    return error;
-  }
-
+  /*Validacao de consistencia
+  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
+    return stat;
+  }*/
+  
   //Obter o numero logico do cluster
-  if((error = soHandleFileCluster (nInode, clustInd, GET, &nLogicClust)) != 0){
-    return error;
+  if((stat = soHandleFileCluster (nInode, clustInd, GET, &nLogicClust)) != 0){
+    return stat;
   }
 
   //Se o cluster ainda nao tiver sido alocado, utiliza-se a funcao handleFileCluster para o fazer
   if(nLogicClust == NULL_CLUSTER){
-    if((error = soHandleFileCluster (nInode, clustInd, ALLOC, &nLogicClust)) != 0){
-      return error;
+    if((stat = soHandleFileCluster (nInode, clustInd, ALLOC, &nLogicClust)) != 0){
+      return stat;
     }
   }
 
   /*Le o cluster que quer escrever*/
-  if((error = soReadCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
-    return error;
+  if((stat = soReadCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
+    return stat;
   }
-
+ 
   /*Copia para o cluster o buff*/
   memcpy(cluster.info.data, buff, BSLPC);
 
   /*Escreve o cluster pretendido*/
-  if((error = soWriteCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
-    return error;
+  if((stat = soWriteCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
+    return stat;
   }
 
+  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
+    return stat;
+  }
+
+  if((stat = soWriteInode(pInode, nInode, IUIN)) != 0){
+    return stat;
+  }
+  
   return 0;
 
 }
