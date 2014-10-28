@@ -1,8 +1,12 @@
 #!/bin/bash 
 #criar as pastas para organizar os outputs e os diffs
+rm -rf prof
 mkdir prof
+rm -rf profRaw
 mkdir profRaw
+rm -rf ours
 mkdir ours
+rm -rf oursRaw
 mkdir oursRaw
 
 filter_base()
@@ -10,6 +14,10 @@ filter_base()
     sed -r 's_.[[].*[[]0m_+++_' \
         | sed -r 's_0x[0-9a-fA-Z]{6,12}_..._g' \
         | sed -r 's_atime = .*, mtime = .*_atime ..., mtime ..._'
+}
+filter_bin()
+{
+    sed -r 's/_bin//'
 }
 
 if [[ "$1" == "1" ]]; then
@@ -39,7 +47,7 @@ mv Makefile Makefile.prof
 cd ../../test
 for (( i = ${FROM}; i <= ${TO}; i++ )); do
 	./ex$i.sh
-	cat testVector$i.rst | filter_base > testVector$i.cleaned.rst
+	cat testVector$i.rst | filter_base | filter_bin > testVector$i.cleaned.rst
 done
 mv *.cleaned.rst prof
 mv *.rst profRaw
@@ -54,7 +62,7 @@ mv Makefile Makefile.ours
 cd ../../test
 for (( i = ${FROM}; i <= ${TO}; i++ )); do
 	./ex$i.sh
-	cat testVector$i.rst | filter_base > testVector$i.cleaned.rst
+	cat testVector$i.rst | filter_base | filter_bin > testVector$i.cleaned.rst
 done
 mv *.cleaned.rst ours
 mv *.rst oursRaw

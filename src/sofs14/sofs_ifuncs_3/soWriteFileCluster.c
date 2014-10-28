@@ -84,12 +84,12 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
     return -EINVAL;
   }
 
-  if((error = soConvertRefInT(nInode, &nBlk, &offset))){
-    return error;
+  if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
+    return stat;
   }
 
-  if((error = soLoadBlockInT(nBlk))){
-    return error;
+  if((stat = soLoadBlockInT(nBlk))){
+    return stat;
   }
 
   pInode = soGetBlockInT();
