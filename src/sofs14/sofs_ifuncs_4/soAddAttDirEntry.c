@@ -93,6 +93,7 @@ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt,
 
   	int stat;
   	SOSuperBlock *p_sosb;
+  	SODataClust *pClust;
   	SOInode *pInodeDir;
   	uint32_t *pIdx, outVal, clustIdx, dirEntryIdx;
 
@@ -157,39 +158,51 @@ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt,
   	dirEntryIdx = pIdx%DPC;
 
   	/*get do data cluster com a entrada de diretorio*/
-  	if((ret=soHandleFileCluster(nInodeDir,clustIdx,GET,&outVal))!=0){
-		return ret;
+  	if((stat=soHandleFileCluster(nInodeDir,clustIdx,GET,&outVal))!=0){
+		return stat;
   	}
 
   	 /*so aloca o cluster se nao estiver alocado*/
-    if(&pOutVal==NULL_CLUSTER)
+    if(outVal==NULL_CLUSTER)
     {
-        if((ret=soHandleFileCluster(nInodeDir,clustInd,ALLOC,&p_outVal))!=0)
-            return ret;
+        if((stat=soHandleFileCluster(nInodeDir,clustIdx,ALLOC,&outVal))!=0){
+            return stat;
+        }
         
-        if((ret=soReadFileCluster(nInodeDir,clustInd,&dc))!=0)
-            return ret;
+        if((stat=soReadFileCluster(nInodeDir,clustInd,&pClust))!=0){
+            return stat;
+        }
         
         /* preenchimento de todas as entradas de diretorio do datacluster*/
         for(i=0; i<DPC; i++)
         {
-            dc.de[i].nInode = NULL_INODE;
-            memset(&(dc.de[i].name),0x00, MAX_NAME+1);
+            pClust.de[i].nInode = NULL_INODE;
+            memset(pClust->info.de[i].name,0x00, MAX_NAME+1);
         }
         
-        if((ret=soWriteFileCluster(nInodeDir,clustInd,&dc))!=0)
-            return ret;
+        if((stat=soWriteFileCluster(nInodeDir,clustIdx,&pClust))!=0){
+            return stat;
+        }
         
         /*atualizacao do tamanho do inode*/
-        if((ret=soReadInode(&inodeDir, nInodeDir))!=0)
-            return ret;
+        if((stat=soReadInode(pInodeDir, nInodeDir))!=0){
+            return stat;
+        }
         
-        inodeDir.size += sizeof(SODirEntry)*DPC;
+        pInodeDir->size += sizeof(SODirEntry)*DPC;
         
-        if((ret=soWriteInode(&inodeDir, nInodeDir))!=0)
+        if((ret=soWriteInode(pInodeDir, nInodeDir))!=0){
             return ret;
+        }
     }
+    //OP - ADD
+    if(op==ADD){
 
+    }
+    //OP - ATTACH
+    if(op==ATTACH){
+    	
+    }
 
   return 0;
 }

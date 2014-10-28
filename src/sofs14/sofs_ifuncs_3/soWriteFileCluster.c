@@ -115,7 +115,7 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   if((stat = soReadCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
     return stat;
   }
-
+ 
   /*Copia para o cluster o buff*/
   memcpy(cluster.info.data, buff, BSLPC);
 
