@@ -12,15 +12,16 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <string.h> 
 
 #include "sofs_probe.h"
 #include "sofs_superblock.h"
 #include "sofs_inode.h"
 #include "sofs_basicoper.h"
 #include "sofs_basicconsist.h"
-#ifdef CLEAN_INODE
+//#ifdef CLEAN_INODE
 #include "sofs_ifuncs_3.h"
-#endif
+//#endif
 
 /** \brief inode in use status */
 #define IUIN  0
