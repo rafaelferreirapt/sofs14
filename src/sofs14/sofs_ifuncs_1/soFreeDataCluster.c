@@ -64,6 +64,10 @@ int soFreeDataCluster (uint32_t nClust)
 	//Ponteiro para superbloco
 	p_sb=soGetSuperBlock();
 
+	if(nClust<=0){
+		return -EINVAL;
+	}
+
 	//Verificar se nClust esta dentro da gama!!
 	if((soQCheckStatDC(p_sb,nClust,&p_stat))!=0){
 
