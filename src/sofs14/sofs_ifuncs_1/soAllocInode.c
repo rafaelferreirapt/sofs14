@@ -134,7 +134,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 			return stat;
 		}
 
-		if((stat = soCleanInode(&p_iNode[offset]) != 0){
+		if((stat = soCleanInode(&p_iNode[offset])) != 0){
 			return stat;
 		}
 
