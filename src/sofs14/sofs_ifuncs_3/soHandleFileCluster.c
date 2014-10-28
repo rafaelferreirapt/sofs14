@@ -18,7 +18,7 @@
 #include "sofs_basicconsist.h"
 #include "sofs_ifuncs_1.h"
 #include "sofs_ifuncs_2.h"
-#include "../sofs_ifuncs_3.h"
+#include "sofs_ifuncs_3.h"
 
 /** \brief operation get the logical number of the referenced data cluster for an inode in use */
 #define GET         0

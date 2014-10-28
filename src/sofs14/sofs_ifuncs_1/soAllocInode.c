@@ -13,11 +13,11 @@
 
 #include "sofs_probe.h"
 #include "sofs_buffercache.h"
-#include "../sofs_superblock.h"
-#include "../sofs_inode.h"
-#include "../sofs_datacluster.h"
-#include "../sofs_basicoper.h"
-#include "../sofs_basicconsist.h"
+#include "sofs_superblock.h"
+#include "sofs_inode.h"
+#include "sofs_datacluster.h"
+#include "sofs_basicoper.h"
+#include "sofs_basicconsist.h"
 /* #define  CLEAN_INODE */
 #ifdef CLEAN_INODE
 #include "sofs_ifuncs_2.h"
