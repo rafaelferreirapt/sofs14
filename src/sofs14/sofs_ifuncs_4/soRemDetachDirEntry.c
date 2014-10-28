@@ -172,22 +172,21 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 
 	//se refcount == 0 temos de fazer free aos data clusters e aos inodes
 	if(inodeEntry.refCount == 0){  
-	  if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
-		return stat;
-	  }
-	  
 	  if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
 		return stat;
 	  }
 
-	  if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
-	    return stat;
+	  if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
+		return stat;
 	  }
-
+	  
 	  if((stat = soFreeInode(nInodeEnt))){
 		return stat;
 	  }
 		
+	  if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+	    return stat;
+	  }		
 	}else{ 
 	  if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
 		return stat;
