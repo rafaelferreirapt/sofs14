@@ -52,7 +52,7 @@ int soFreeDataCluster (uint32_t nClust)
 	SOSuperBlock* p_sb; //Criação de um ponteiro para o superbloco
 	uint32_t p_stat; //variavel para estado do cluster de dados
 	int error; //Variavel para verificações de consistência
-
+	SODataClust clust;
 	soColorProbe (614, "07;33", "soFreeDataCluster (%"PRIu32")\n", nClust);
 
 	//Obter o bloco de superbloco
@@ -64,52 +64,47 @@ int soFreeDataCluster (uint32_t nClust)
 	//Ponteiro para superbloco
 	p_sb=soGetSuperBlock();
 
-	if(nClust<=0){
+	//Ver se nClust esta dentro da gama
+	if(nClust<=0 || nClust>=p_sb->dZoneTotal){
 		return -EINVAL;
 	}
 
-	//Verificar se nClust esta dentro da gama!!
-	if((soQCheckStatDC(p_sb,nClust,&p_stat))!=0){
+	//Estado do data cluster
+	if((error=soQCheckStatDC(p_sb,nClust,&p_stat))!=0){
 
-		return -EINVAL;
+		return error;
 
 	}
 	//Verificar se o cluster esta ou não alocado...
-	if(p_stat!=ALLOC_CLT){
+	if(p_stat==FREE_CLT){
 
 		return -EDCNALINVAL;
 	}
 
-	// Verificar a consistência do header do cluster de dados
-	if((soQCheckDZ(p_sb))!=0){
 
-		return -EDCINVAL;
-	}
+	if((error=soReadCacheCluster(p_sb->dZoneStart+nClust*BLOCKS_PER_CLUSTER,&clust))!=0){
+				return error;
+				}
+	clust.prev=clust.next=NULL_CLUSTER;
+	
+	if((error=soWriteCacheCluster(p_sb->dZoneStart+nClust*BLOCKS_PER_CLUSTER,&clust))!=0){
+		return error;
+			}
 
-
-
-	p_sb->dHead=p_sb->dTail=NULL_CLUSTER; //Inicialização do head e tail
-
+	
 	//the insertion cache is full, deplete it*/
 
 	if(p_sb->dZoneInsert.cacheIdx==DZONE_CACHE_SIZE){
 
-		soDeplete(p_sb);
-	}
-
-
+		if((error=soDeplete(p_sb))!=0){
+			return error;
+				}
+			}
 	p_sb->dZoneInsert.cache[p_sb->dZoneInsert.cacheIdx]=nClust;		//Um cluster livre é inserido na posição cacheIdx
 	p_sb->dZoneInsert.cacheIdx+=1;			//Incrementa para apontar para a proxima posição onde pode ser inserido um cluster
 	p_sb->dZoneFree+=1;				//Incrementa nº de clusters livres!!
 
 
-
-
-	if((error==soQCheckSuperBlock(p_sb))!=0){ 	//Verificar consistência do superbloco
-
-		return error;
-
-	}
 
 
 	if((error==soStoreSuperBlock())!=0){		//Inserir informação no dispositivo
@@ -154,7 +149,7 @@ int soDeplete (SOSuperBlock *p_sb)
 
 	}
 
-	for(cPos = 0; cPos < DZONE_CACHE_SIZE; cPos++) {
+	for(cPos = 0; cPos < p_sb->dZoneInsert.cacheIdx; cPos++) {
 
 		/* Cálculo do physical number do cluster apontado */
 		NumClu = p_sb->dZoneStart + p_sb->dZoneInsert.cache[cPos] * BLOCKS_PER_CLUSTER;
@@ -189,7 +184,7 @@ int soDeplete (SOSuperBlock *p_sb)
 	}
 
 	/* Limpeza da cache de inserção */
-	for(cPos = 0; cPos < DZONE_CACHE_SIZE; cPos++){
+	for(cPos = 0; cPos < p_sb->dZoneInsert.cacheIdx; cPos++){
 		p_sb->dZoneInsert.cache[cPos] = NULL_CLUSTER;
 	}
 
