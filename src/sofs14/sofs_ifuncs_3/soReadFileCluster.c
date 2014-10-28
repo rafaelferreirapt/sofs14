@@ -64,11 +64,12 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (411, "07;31", "soReadFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  int stat;
-  uint32_t nLogicClust;
-  //SOInode *pInode;
+  SOInode ind;
+  SODataClust clust;
   SOSuperBlock *p_sosb;
-  //uint32_t nBlk, offset;
+  int stat, i;
+  uint32_t nLogicClust, nFisicClust;
+
 
   //Load do SuperBlock
   if((stat = soLoadSuperBlock())!=0){
@@ -78,35 +79,45 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   //Obter o ponteiro para o conteudo do SuperBlock
   p_sosb = soGetSuperBlock();
 
-  //Validacao de conformidade
+  //Validacoes
   if(((nInode >= p_sosb->iTotal)|| nInode <= 0) || (clustInd >= MAX_FILE_CLUSTERS) || (buff == NULL)){
     return -EINVAL;
   }
 
-  /*if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
+  //read inode, also checks consistency
+  if((stat = soReadInode(&ind, nInode, IUIN)) != 0){
     return stat;
   }
 
-  if((stat = soLoadBlockInT(nBlk))){
-    return stat;
-  }
-
-  pInode = soGetBlockInT();
-*/
   //Obter o numero logico do cluster
   if((stat = soHandleFileCluster(nInode, clustInd, GET, &nLogicClust)) != 0){
     return stat;
   }
 
-  //Se o cluster ainda nao tiver sido alocado, preenche-se a regiao de armazenamento com \0's
   if(nLogicClust == NULL_CLUSTER){
-    memset(buff,'\0',BSLPC);
+      for(i = 0; i < BSLPC; i++)
+      {
+        buff->info.data[i] = '\0';   
+      }
+  }
+  else{
+    nFisicClust = p_sosb->dZoneStart + nLogicClust * BLOCKS_PER_CLUSTER; 
+
+    if( (stat = soReadCacheCluster(nFisicClust, &clust)) != 0){
+      return stat;
+    }
+
+    /*copiar a informaçao para o buffer*/
+    memcpy(buff, &clust, sizeof(SODataClust));
+
+    if((stat = soWriteCacheCluster(nFisicClust, &clust)) != 0){
+      return stat;
+    }
   }
 
-  //Se o cluster ja estiver alocado, passar o conteudo do cluster para o buffer
-  else{
-    if((stat = soReadCacheCluster(p_sosb->dZoneStart + (nLogicClust * BLOCKS_PER_CLUSTER), buff)) != 0)
-      return stat;
+  /*gravar superBlock*/
+  if( (stat = soStoreSuperBlock()) != 0){
+    return stat;
   }
 
   return 0;

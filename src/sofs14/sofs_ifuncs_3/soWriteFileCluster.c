@@ -64,12 +64,10 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (412, "07;31", "soWriteFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  int stat;
-  uint32_t nLogicClust;
-  SODataClust cluster;
-  SOInode *pInode;
+  SODataClust *pCluster;
   SOSuperBlock *p_sosb;
-  uint32_t nBlk, offset;
+  uint32_t nLogicClust;
+  int stat;
 
   //Load do SuperBlock
   if((stat = soLoadSuperBlock()) != 0){
@@ -82,21 +80,6 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   //Validacao de conformidade
   if (((nInode >= p_sosb->iTotal)|| nInode <= 0) || (clustInd > MAX_FILE_CLUSTERS) || (buff == NULL)){
     return -EINVAL;
-  }
-
-  if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
-    return stat;
-  }
-
-  if((stat = soLoadBlockInT(nBlk))){
-    return stat;
-  }
-
-  pInode = soGetBlockInT();
-
-  //Validacao de consistencia
-  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
-    return stat;
   }
   
   //Obter o numero logico do cluster
@@ -111,20 +94,24 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
     }
   }
 
-  /*Le o cluster que quer escrever*/
-  if((stat = soReadCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
+  //Carrega o conteudo do cluster especifico
+  if((stat = soLoadDirRefClust(p_sosb->dZoneStart+nLogicClust*BLOCKS_PER_CLUSTER)) != 0){
     return stat;
   }
- 
-  /*Copia para o cluster o buff*/
-  memcpy(cluster.info.data, buff, BSLPC);
-
-  /*Escreve o cluster pretendido*/
-  if((stat = soWriteCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
+  
+  //Obter ponteiro para o cluster
+  pCluster = soGetDirRefClust();
+  
+  //Copiar dados do buff para o cluster
+  pCluster->info = buff->info;
+  
+  //Gravar cluster
+  if((stat = soStoreDirRefClust()) != 0){
     return stat;
   }
-
-  if((stat = soWriteInode(pInode, nInode, IUIN)) != 0){
+  
+  //Gravar SuperBlock
+  if((stat = soStoreSuperBlock()) != 0){
     return stat;
   }
   
