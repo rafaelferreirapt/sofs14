@@ -73,7 +73,7 @@ int soCleanInode (uint32_t nInode)
 		return -EINVAL;
 	}
 
-	if((stat=soReadInode(&p_inode, nInode, IUIN))!=0)
+	if((stat=soReadInode(&p_inode, nInode, FDIN))!=0)
 	{
 		return stat;
 	}

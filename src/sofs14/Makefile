@@ -18,7 +18,7 @@ OBJS += $(IFUNCS4)
 
 #IFUNCS2  = sofs_ifuncs_2/soReadInode.o
 #IFUNCS2 += sofs_ifuncs_2/soWriteInode.o
-#IFUNCS2 += sofs_ifuncs_2/soCleanInode.o 
+IFUNCS2 += sofs_ifuncs_2/soCleanInode.o 
 #IFUNCS2 += sofs_ifuncs_2/soAccessGranted.o
 
 #IFUNCS3  = sofs_ifuncs_3/soReadFileCluster.o
