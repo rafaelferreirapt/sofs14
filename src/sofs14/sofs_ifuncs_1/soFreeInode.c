@@ -74,7 +74,7 @@ int soFreeInode (uint32_t nInode)
 
 	if((stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0) return stat;
 
-	p_inode[offset].mode = INODE_FREE;
+	p_inode[offset].mode |= INODE_FREE;
 
 	/*se a lista de nos free estiver vazia, entao o prev e next do inode sao null, e este passa a ser o head e tail*/
 	if(p_sb->iFree==0){
