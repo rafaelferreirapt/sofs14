@@ -61,7 +61,7 @@ int soFreeInode (uint32_t nInode)
 	p_sb = soGetSuperBlock();
 
 	/*verificar se o iNode não é o 0 que nao pode ser colocado a free, ou se está dentro dos parametros, neste caso se o nInode é menor que o p_sb->iTotal*/
-	if(nInode >= p_sb->iTotal || nInode < 0) return -EINVAL;
+	if(nInode >= p_sb->iTotal || nInode <= 0) return -EINVAL;
 
 	/*leitura do inode a ser libertado*/
 
@@ -74,7 +74,7 @@ int soFreeInode (uint32_t nInode)
 
 	if((stat = soQCheckInodeIU(p_sb, &p_inode[offset])) != 0) return stat;
 
-	p_inode[offset].mode = INODE_FREE;
+	p_inode[offset].mode |= INODE_FREE;
 
 	/*se a lista de nos free estiver vazia, entao o prev e next do inode sao null, e este passa a ser o head e tail*/
 	if(p_sb->iFree==0){

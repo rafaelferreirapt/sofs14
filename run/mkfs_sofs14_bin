@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SUFFIX=$(getconf LONG_BIT)
+
+${0}_${SUFFIX} $*

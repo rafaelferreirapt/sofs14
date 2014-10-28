@@ -20,9 +20,9 @@
 #include "sofs_basicoper.h"
 #include "sofs_basicconsist.h"
 /* #define  CLEAN_CLUSTER */
-#ifdef CLEAN_CLUSTER
+/* #ifdef CLEAN_CLUSTER */
 #include "sofs_ifuncs_3.h"
-#endif
+/* #endif */
 
 /* Allusion to internal functions */
 
@@ -98,8 +98,8 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	cluster.prev = cluster.next = NULL_CLUSTER;
 	
 	if(cluster.stat != NULL_INODE){ /* it is, clean it */
-		if ((stat = soCleanDataCluster (cluster.stat, nClust)) != 0){
-   			return stat;
+		if ((status = soCleanDataCluster (cluster.stat, *p_nClust)) != 0){
+   			return status;
 		}
 	}
 
