@@ -17,9 +17,7 @@
 #include "sofs_basicoper.h"
 #include "sofs_basicconsist.h"
 /* #define  CLEAN_INODE */
-//#ifdef CLEAN_INODE
 #include "sofs_ifuncs_3.h"
-//#endif
 
 /** \brief inode in use status */
 #define IUIN  0

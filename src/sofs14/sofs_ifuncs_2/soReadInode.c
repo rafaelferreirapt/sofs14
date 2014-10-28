@@ -12,7 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <string.h> 
+#include <string.h>
 
 #include "sofs_probe.h"
 #include "sofs_superblock.h"
