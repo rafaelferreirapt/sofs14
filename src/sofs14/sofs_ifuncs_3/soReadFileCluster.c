@@ -66,9 +66,9 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   int stat;
   uint32_t nLogicClust;
-  SOInode *pInode;
+  //SOInode *pInode;
   SOSuperBlock *p_sosb;
-  uint32_t nBlk, offset;
+  //uint32_t nBlk, offset;
 
   //Load do SuperBlock
   if((stat = soLoadSuperBlock())!=0){
@@ -83,7 +83,7 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
     return -EINVAL;
   }
 
-  if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
+  /*if((stat = soConvertRefInT(nInode, &nBlk, &offset))){
     return stat;
   }
 
@@ -92,7 +92,7 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   }
 
   pInode = soGetBlockInT();
-
+*/
   //Obter o numero logico do cluster
   if((stat = soHandleFileCluster(nInode, clustInd, GET, &nLogicClust)) != 0){
     return stat;
@@ -105,7 +105,7 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   //Se o cluster ja estiver alocado, passar o conteudo do cluster para o buffer
   else{
-    if((stat = soReadCacheCluster(p_sosb->dZoneStart + nLogicClust * BLOCKS_PER_CLUSTER, buff)) != 0)
+    if((stat = soReadCacheCluster(p_sosb->dZoneStart + (nLogicClust * BLOCKS_PER_CLUSTER), buff)) != 0)
       return stat;
   }
 

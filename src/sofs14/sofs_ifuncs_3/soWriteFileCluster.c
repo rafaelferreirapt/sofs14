@@ -94,10 +94,10 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   pInode = soGetBlockInT();
 
-  /*Validacao de consistencia
+  //Validacao de consistencia
   if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
     return stat;
-  }*/
+  }
   
   //Obter o numero logico do cluster
   if((stat = soHandleFileCluster (nInode, clustInd, GET, &nLogicClust)) != 0){
@@ -121,10 +121,6 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 
   /*Escreve o cluster pretendido*/
   if((stat = soWriteCacheCluster((nLogicClust*4+p_sosb->dZoneStart), &cluster)) != 0){
-    return stat;
-  }
-
-  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
     return stat;
   }
 
