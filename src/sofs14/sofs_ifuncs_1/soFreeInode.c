@@ -61,7 +61,7 @@ int soFreeInode (uint32_t nInode)
 	p_sb = soGetSuperBlock();
 
 	/*verificar se o iNode não é o 0 que nao pode ser colocado a free, ou se está dentro dos parametros, neste caso se o nInode é menor que o p_sb->iTotal*/
-	if(nInode >= p_sb->iTotal || nInode < 0) return -EINVAL;
+	if(nInode >= p_sb->iTotal || nInode <= 0) return -EINVAL;
 
 	/*leitura do inode a ser libertado*/
 
