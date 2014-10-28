@@ -85,148 +85,152 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
   soColorProbe (314, "07;31", "soRemDetachDirEntry (%"PRIu32", \"%s\", %"PRIu32")\n", nInodeDir, eName, op);
 
   if(op != REM && op != DETACH){
-  	return -EINVAL;
+	return -EINVAL;
   }
 
   uint32_t idxDir, nInodeEnt;
   int stat, i;
   SOInode inodeDir, inodeEntry;
   SODataClust dc;
-  SOSuperBlock *p_sb;
-
-  /* 
-    Precisamos de permissões de escrita e execução
-  */
-  if((stat = soAccessGranted(nInodeDir, X))){
-    return stat;
-  }
-  if((stat = soAccessGranted(nInodeDir, W))){
-    return stat;
-  }
 
   /*
-	Vou fazer load do inode, a função soReadInode já verifica se o número do inode
-	é valido ou não. O inode tem de estar em uso.
+  Vou fazer load do inode, a função soReadInode já verifica se o número do inode
+  é valido ou não. O inode tem de estar em uso.
   */
   if((stat = soReadInode(&inodeDir, nInodeDir, IUIN))){
-  	return stat;
+	return stat;
   }
 
-  if((stat = soLoadSuperBlock())){
-  	return stat;
+  if((inodeDir.mode & INODE_DIR) != INODE_DIR){
+	return -ENOTDIR;
   }
 
-  p_sb = soGetSuperBlock();
   /* 
-	Com a soQCheckDirCont sabemos se o inode representa um diretório e se o conteudo é consistente 
+	Precisamos de permissões de escrita e execução
   */
-  if((stat = soQCheckDirCont(p_sb, &inodeDir))){
-  	return stat;
+  if((stat = soAccessGranted(nInodeDir, X))){
+	return stat;
+  }
+  if((stat = soAccessGranted(nInodeDir, W))){
+	return stat;
   }
 
-  if((stat = soStoreSuperBlock()) != 0){
-    return stat;
-  }
-
-
   /*
-	O eName tem de ser um base name e não um path. Tem de existir um dir com o name = eName
-	Vamos obter o nº do InodeEntry que procuramos com o eName. 
+  O eName tem de ser um base name e não um path. Tem de existir um dir com o name = eName
+  Vamos obter o nº do InodeEntry que procuramos com o eName. 
   */
-
+  if(eName == NULL){
+    return -EINVAL;
+  } 
+  if(strlen(eName) == 0){
+    return -EINVAL;
+  }
+  if(strlen(eName) > MAX_NAME){
+    return -ENAMETOOLONG;
+  }
+  if(strchr(eName, '/') != 0){
+  	return -EINVAL;
+  }
+    
   /*
-  	o soGetDirEntryByName tem de ter permissão de execução no diretório para o atravessar, já faz check
+	o soGetDirEntryByName tem de ter permissão de execução no diretório para o atravessar, já faz check
   */
   if((stat = soGetDirEntryByName(nInodeDir, eName, &nInodeEnt, &idxDir))){
-  	return stat;
+	return stat;
   }
 
   /* 
-  	Sempre que a operação for remover e o tipo do inode associado à dir que vai ser removida for do tipo directory, a operação apenas pode ser executada se o diretório estiver vazio.
+	Sempre que a operação for remover e o tipo do inode associado à dir que vai ser removida for do tipo directory, a operação apenas pode ser executada se o diretório estiver vazio.
   */
   if((stat = soReadInode(&inodeEntry, nInodeEnt, IUIN))){
-  	return stat;
+	return stat;
   }
   
   if(op == REM){
-  	if((inodeEntry.mode & INODE_DIR)){
-  		if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
-  			return stat;
-  		}
-      //remove reference a ela propria
-      inodeEntry.refCount--;
-      //remove reference ..
-      inodeDir.refCount--;
-    }
+	if((inodeEntry.mode & INODE_DIR)){
+	  if((stat = soCheckDirectoryEmptiness(nInodeEnt))){
+		return stat;
+	  }
+	  //remove reference a ela propria
+	  inodeEntry.refCount--;
+	  //remove reference ..
+	  inodeDir.refCount--;
+	}
 
-    if((stat = soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
-      return stat;
-    }
+	if((stat = soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
+	  return stat;
+	}
 
-    dc.info.de[idxDir%DPC].name[MAX_NAME] = dc.info.de[idxDir%DPC].name[0];
-    dc.info.de[idxDir%DPC].name[0]='\0';
+	dc.info.de[idxDir%DPC].name[MAX_NAME] = dc.info.de[idxDir%DPC].name[0];
+	dc.info.de[idxDir%DPC].name[0]='\0';
 
-    inodeEntry.refCount--;
-    
-    if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
-      return stat;
-    }
+	inodeEntry.refCount--;
+	
+	if((stat = soWriteFileCluster(nInodeDir, idxDir/DPC, &dc))){
+	  return stat;
+	}
 
-  	//se refcount == 0 temos de fazer free aos data clusters e aos inodes
-    if(inodeEntry.refCount == 0){  
-      if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
-        return stat;
-      }
-      
-      if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-        return stat;
-      }
-      
-      if((stat = soFreeInode(nInodeEnt))){
-        return stat;
-      }
-        
-    }else{ 
-      if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-        return stat;
-      }
-    }
+	//se refcount == 0 temos de fazer free aos data clusters e aos inodes
+	if(inodeEntry.refCount == 0){  
+	  if((stat = soHandleFileClusters(nInodeEnt, 0, FREE))){
+		return stat;
+	  }
+	  
+	  if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+		return stat;
+	  }
 
-  	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
-  		return stat;
-  	}
+	  if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+	    return stat;
+	  }
+
+	  if((stat = soFreeInode(nInodeEnt))){
+		return stat;
+	  }
+		
+	}else{ 
+	  if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+		return stat;
+	  }
+	  
+	  if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+	    return stat;
+	  }
+	}
+
+	
 
   }else{
-  	/* DETACH */
-  	if((inodeEntry.mode & INODE_DIR) == INODE_DIR){
-      inodeEntry.refCount--;
-      inodeDir.refCount--;
-    }
+	/* DETACH */
+	if((inodeEntry.mode & INODE_DIR) == INODE_DIR){
+	  inodeEntry.refCount--;
+	  inodeDir.refCount--;
+	}
 
-    if((stat=soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
-      return stat; 
-    }
-               
-    inodeEntry.refCount--;
+	if((stat=soReadFileCluster(nInodeDir, (idxDir/DPC), &dc))){
+	  return stat; 
+	}
+			   
+	inodeEntry.refCount--;
 
-    for(i = 0; i < MAX_NAME; i++){
-      dc.info.de[idxDir % DPC].name[i] = '\0';
-    }
-    
-    dc.info.de[idxDir % DPC].nInode = NULL_INODE;
+	for(i = 0; i < MAX_NAME; i++){
+	  dc.info.de[idxDir % DPC].name[i] = '\0';
+	}
+	
+	dc.info.de[idxDir % DPC].nInode = NULL_INODE;
 
-    if((stat = soWriteFileCluster(nInodeDir, (idxDir / DPC), &dc))){
-      return stat;
-    }
-    
-    if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
-      return stat;
-    }
+	if((stat = soWriteFileCluster(nInodeDir, (idxDir / DPC), &dc))){
+	  return stat;
+	}
+	
+	if((stat = soWriteInode(&inodeEntry, nInodeEnt, IUIN))){
+	  return stat;
+	}
   
-    if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
-      return stat;
-    }
-            
+	if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN))){
+	  return stat;
+	}
+			
   }
 
   return 0;
