@@ -64,11 +64,10 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 {
   soColorProbe (514, "07;31", "soAccessGranted (%"PRIu32", %"PRIu32")\n", nInode, opRequested);
 
-  uint32_t block;
-  uint32_t offset;
   uint16_t validType;
   SOSuperBlock *p_sosb;
   int stat;
+  SOInode p_ind;
 
   /*Load superblock*/
   if((stat=soLoadSuperBlock()) != 0 ){
@@ -88,27 +87,20 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 
   /*Validação de consistencia*/
 
-  if((stat = soConvertRefInT(nInode, &block, &offset)) != 0){
-    return stat;
-  }
-  if((stat = soLoadBlockInT(block)) != 0){
+  if((stat = soReadInode(&p_ind, nInode, IUIN)) != 0){
     return stat;
   }
 
-  SOInode *p_ind = soGetBlockInT();
-
-  if (soQCheckInodeIU(p_sosb, &p_ind[offset])) return -EIUININVAL;
-
-  if(p_ind[offset].mode & INODE_FREE) return -EIUININVAL; /*verifica a consistÊncia, se um iNode está a free, depois de se dizer que está em uso*/
+  if(p_ind.mode & INODE_FREE) return -EIUININVAL; /*verifica a consistÊncia, se um iNode está a free, depois de se dizer que está em uso*/
 
 
-  uint32_t owner = p_ind[offset].owner;      /*ID do usuário do dono do ficheiro*/
-  uint32_t group = p_ind[offset].group;      /*ID do grupo do dono do ficheiro */
+  uint32_t owner = p_ind.owner;      /*ID do usuário do dono do ficheiro*/
+  uint32_t group = p_ind.group;      /*ID do grupo do dono do ficheiro */
 
 
-  validType = p_ind[offset].mode & INODE_TYPE_MASK; /*Verificar se o no-i esta associado a um tipo valido(ficheiro, diretorio, atalho)*/
+  validType = p_ind.mode & INODE_TYPE_MASK; /*Verificar se o no-i esta associado a um tipo valido(ficheiro, diretorio, atalho)*/
 
-  if((validType != INODE_DIR && validType != INODE_FILE && validType != INODE_SYMLINK) || p_ind == NULL){
+  if((validType != INODE_DIR && validType != INODE_FILE && validType != INODE_SYMLINK)){
       return -EINVAL;
   }
 
@@ -116,7 +108,7 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
   {
     if(opRequested & X)		//Mas X só é permitido, se em group, own ou other for permitido
     {
-      if((((p_ind[offset].mode & INODE_EX_USR) == INODE_EX_USR) | ((p_ind[offset].mode & INODE_EX_GRP) == INODE_EX_GRP) | ((p_ind[offset].mode & INODE_EX_OTH) == INODE_EX_OTH)) != true){
+      if((((p_ind.mode & INODE_EX_USR) == INODE_EX_USR) | ((p_ind.mode & INODE_EX_GRP) == INODE_EX_GRP) | ((p_ind.mode & INODE_EX_OTH) == INODE_EX_OTH)) != true){
           return -EACCES;
       }
     }
@@ -124,17 +116,17 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
   else if(getuid()!=0){   //Para quando não é o root
     if(getuid()==owner){
       if (opRequested & R){			// R - Permissão de Leitura
-        if ((p_ind[offset].mode & INODE_RD_USR)!=INODE_RD_USR){
+        if ((p_ind.mode & INODE_RD_USR)!=INODE_RD_USR){
           return -EACCES;
         }
       }
       if (opRequested & W){			// W - Permissão de Escrita
-        if ((p_ind[offset].mode & INODE_WR_USR)!=INODE_WR_USR){
+        if ((p_ind.mode & INODE_WR_USR)!=INODE_WR_USR){
           return -EACCES;
         }
       }
       if (opRequested & X){		// X - Permissão de Execução
-        if ((p_ind[offset].mode & INODE_EX_USR)!=INODE_EX_USR){
+        if ((p_ind.mode & INODE_EX_USR)!=INODE_EX_USR){
           return -EACCES;
         }
       }
@@ -142,17 +134,17 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 
     else if(getgid()==group){
       if (opRequested & R){			// R - Permissão de Leitura
-        if ((p_ind[offset].mode & INODE_RD_GRP)!=INODE_RD_GRP){
+        if ((p_ind.mode & INODE_RD_GRP)!=INODE_RD_GRP){
           return -EACCES;
         }
       }
       if (opRequested & W){			// W - Permissão de Escrita
-        if ((p_ind[offset].mode & INODE_WR_GRP)!=INODE_WR_GRP){
+        if ((p_ind.mode & INODE_WR_GRP)!=INODE_WR_GRP){
           return -EACCES;
         }
       }
       if (opRequested & X){		// X - Permissão de Execução
-        if ((p_ind[offset].mode & INODE_EX_GRP)!=INODE_EX_GRP){
+        if ((p_ind.mode & INODE_EX_GRP)!=INODE_EX_GRP){
           return -EACCES;
         }
       }
@@ -160,17 +152,17 @@ int soAccessGranted (uint32_t nInode, uint32_t opRequested)
 
     else if(getuid()!=owner && getgid()!=group){
       if (opRequested & R){			// R - Permissão de Leitura
-        if ((p_ind[offset].mode & INODE_RD_OTH)!=INODE_RD_OTH){
+        if ((p_ind.mode & INODE_RD_OTH)!=INODE_RD_OTH){
           return -EACCES;
         }
       }
       if (opRequested & W){			// W - Permissão de Escrita
-        if ((p_ind[offset].mode & INODE_WR_OTH)!=INODE_WR_OTH){
+        if ((p_ind.mode & INODE_WR_OTH)!=INODE_WR_OTH){
           return -EACCES;
         }
       }
       if (opRequested & X){		// X - Permissão de Execução
-        if ((p_ind[offset].mode & INODE_EX_OTH)!=INODE_EX_OTH){
+        if ((p_ind.mode & INODE_EX_OTH)!=INODE_EX_OTH){
           return -EACCES;
         }
       }

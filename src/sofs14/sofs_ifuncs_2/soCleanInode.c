@@ -60,7 +60,6 @@ int soCleanInode (uint32_t nInode)
 	SOSuperBlock* p_sb;
 	SOInode p_inode;
 	int stat;
-	uint32_t nBlk,offset;
 
 	//Obter informação so SuperBloco
 	if((stat=soLoadSuperBlock())!=0){
@@ -74,7 +73,7 @@ int soCleanInode (uint32_t nInode)
 		return -EINVAL;
 	}
 
-	if((stat=soReadInode(nInode, %p_inode))!=0)
+	if((stat=soReadInode(&p_inode, nInode, IUIN))!=0)
 	{
 		return stat;
 	}
