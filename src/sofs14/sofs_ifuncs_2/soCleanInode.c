@@ -60,7 +60,7 @@ int soCleanInode (uint32_t nInode)
 	soColorProbe (513, "07;31", "soCleanInode (%"PRIu32")\n", nInode);
 
 	SOSuperBlock* p_sb;
-	SOInode* p_inode;
+	SOInode p_inode;
 	int stat;
 	uint32_t nBlk,offset;
 
@@ -76,17 +76,12 @@ int soCleanInode (uint32_t nInode)
 		return -EINVAL;
 	}
 
-	if((stat=soConvertRefInT(nInode,&nBlk,&offset))!=0){
-		return stat;
-	} 	
-	//Obter informação da tabela de Inodes	
-	if((stat=soLoadBlockInT(nBlk))!=0){
+	if((stat=soReadInode(nInode, %p_inode))!=0)
+	{
 		return stat;
 	}
-	p_inode=soGetBlockInT(); //Ponteiro para tabela de Inodes
-
 	//Se o inode livre no estado sujo for inconsistente
-	if((stat = soQCheckFDInode(p_sb,&p_inode[offset]))!=0){
+	if((stat = soQCheckFDInode(p_sb,&p_inode))!=0){
 		return stat;
 	}
 
