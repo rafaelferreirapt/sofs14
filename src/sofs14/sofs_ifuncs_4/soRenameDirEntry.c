@@ -151,15 +151,12 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   }
   perror("antesQcheck");*/
   //verificação se o novo nome a alterar existe
-  stat=soGetDirEntryByName(nInodeDir,oldName,NULL,&p_idx);
-  if(stat != 0)
-  {
+  if((stat=soGetDirEntryByName(nInodeDir,oldName,NULL,&p_idx))!= 0){
     return stat;
   }
+  
 
-  stat=soGetDirEntryByName(nInodeDir,newName,NULL,&p_idx1);
-  if(stat == 0)
-  {
+  if((stat=soGetDirEntryByName(nInodeDir,newName,NULL,NULL)) == 0){
     return -EEXIST;
   }
   /*if(stat != 0)
