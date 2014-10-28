@@ -18,10 +18,7 @@
 #include "sofs_datacluster.h"
 #include "sofs_basicoper.h"
 #include "sofs_basicconsist.h"
-/* #define  CLEAN_INODE */
-#ifdef CLEAN_INODE
 #include "sofs_ifuncs_2.h"
-#endif
 
 /**
  *  \brief Allocate a free inode.
@@ -134,7 +131,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 			return stat;
 		}
 
-		if((stat = soCleanInode(&p_iNode[offset])) != 0){
+		if((stat = soCleanInode(*p_nInode)) != 0){
 			return stat;
 		}
 
