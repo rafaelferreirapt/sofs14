@@ -76,9 +76,19 @@ static uint32_t oldNInodeDir = 0;
 int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
   soColorProbe (311, "07;31", "soGetDirEntryByPath (\"%s\", %p, %p)\n", ePath, p_nInodeDir, p_nInodeDir);
-  		int error; //Variável para verificação de erros
-  		nSymLinks=0;	//Variavel para nºtotal de atalhos
-  		oldNInodeDir=0; //Variavel para armazenar o nº do no onde se ficou antes do aparecimento de um atalho
+  		
+  		//Variável para verificação de erros
+  		int error; 
+  		
+  		nSymLinks=0;	
+  		oldNInodeDir=0; 
+  		
+  		//no-i correspondente ao directório
+  		uint32_t nInodeDir;
+  		
+  		//no-i correspondente à entrada de directório
+  		uint32_t nInodeEnt;
+  		
   		
   		//Ponteiro para o string associado ao parametro epath não pode ser nulo
   		if(ePath==NULL)
@@ -94,28 +104,28 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 
 		}
 
-		//Verificar se o caminho ou qualquer dos seus componentes excede o tamanho permitido
+		//Verificar se o caminho excede o tamanho maximo de caracteres permitido
 		if(strlen(ePath)>MAX_PATH)
 				{
 
 				return ENAMETOOLONG;
 				}
 
-		// Atravessar caminho para obter DirEntry
-		if((error=soTraversePath(ePath,p_nInodeDir,p_nInodeEnt))!=0)
+		// Atravessar caminho / primeira chamada à função
+		if((error=soTraversePath(ePath,&nInodeDir,&nInodeEnt))!=0)
 		{
 			return error;
 		}
 
-
+		//Se ja atravessou o caminho pretendido,*p_nInodeDir e *p_nInodeEnt voltam as condições iniciais(0);começa
 		if(p_nInodeDir!=NULL){
 
-			*p_nInodeDir=0;
+			*p_nInodeDir=nInodeDir;
 		}
 
 		if(p_nInodeEnt!=NULL)
 		{
-			*p_nInodeEnt=0;
+			*p_nInodeEnt=nInodeEnt;
 		}
 
 
@@ -153,19 +163,31 @@ int soGetDirEntryByPath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_n
 
 int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInodeEnt)
 {
+		//Variavel auxiliar para salvaguarda de informação
+		char save_ePath[MAX_PATH+1]; 
 		
-		char save_ePath[MAX_PATH+1]; //Variavel auxiliar para salvaguarda de informação
-		char save2_ePath[MAX_PATH+1];//Variavel auxiliar para salvaguarda de informação
-		int error;					//Variavel para verificação de erros
-		SOInode inode;				//Variável do tipo SOInode
-		uint32_t status;			//Verificação do estado do inode em uso
-		SODataClust buff;			//Variavel do tipo SODataCluster
-		char path[MAX_PATH+1];		//String auxiliar path
-		char *d_name;				//dirname
-		char *b_name;				//basename
-		uint32_t p_idx;			  	//Indice para entrada de directório
+		//Variavel auxiliar para salvaguarda de informação
+		char save2_ePath[MAX_PATH+1];
 		
+		//Variavel para verificação de erros
+		int error;					
 		
+		//no-i associado ao directorio/entrada de directorio
+		SOInode inode;				
+		
+		//Cluster de dados para ler o conteudo dos atalhos
+		SODataClust buff;			
+		
+		//String auxiliar path
+		char path[MAX_PATH+1];
+
+		//dirname		
+		char *d_name;
+
+		//basename				
+		char *b_name;				
+		
+		//Referencia para superbloco
 		SOSuperBlock *p_sb;
 
 		//Carregar superbloco para memoria interna
@@ -177,7 +199,7 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		//Obter ponteiro para superbloco
 		p_sb=soGetSuperBlock();
 
-		
+		//Salvaguarda de ePath
 		strcpy(save_ePath,ePath);
 		
 		//dirname
@@ -210,7 +232,7 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		*p_nInodeDir=*p_nInodeEnt;
 		}
 
-		//Se dirname='.' *p_nInodeDir=0
+		//Se dirname='.' *p_nInodeDir=oldNInodeDir
 		if(strcmp(d_name,".")==0)
 		{
 			*p_nInodeDir=oldNInodeDir;
@@ -227,26 +249,30 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 			strcpy(b_name,".");	
 		}
 
-		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
-		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
-			return -ELDCININVAL;
-		}
 
 		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros válidos
-		if((error=soReadInode(&inode,*p_nInodeDir,status))!=0)
+		if((error=soReadInode(&inode,*p_nInodeDir,IUIN))!=0)
 		{
 			return error;
 		}
 
-		//Verificar consistência do directório
-		if((soQCheckDirCont(p_sb,&inode))!=0){
-			return -EDIRINVAL;
-		}
 
 		//Ver se o no-i corresponde a um directorio
 		if((inode.mode & INODE_DIR)!=INODE_DIR)
 		{
 			return -ENOTDIR;
+		}
+		
+		else
+		
+		{
+
+		//Verificar consistência do directório
+		if((soQCheckDirCont(p_sb,&inode))!=0)
+		{
+			return -EDIRINVAL;
+		}
+
 		}
 
 		//Verificar permissões de execução
@@ -256,54 +282,44 @@ int soTraversePath (const char *ePath, uint32_t *p_nInodeDir, uint32_t *p_nInode
 		}
 
 		//Obter nome da entrada de directorio
-		if((soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,&p_idx))!=0)
+		if((soGetDirEntryByName(*p_nInodeDir,b_name,p_nInodeEnt,NULL))!=0)
 		{
 			return -ENOENT;
 		}
 
 
-
-		//Nos-i dos diversos componentes de encaminhamento tem que estar em uso
-		if((status=soQCheckInodeIU(p_sb,&inode))!=0){
-			return status;
-		}
-
 		
 		//Ler um no-i da tabela de inodes que tem de corresponder a tipos de ficheiros vàlidos
-		if((error=soReadInode(&inode,*p_nInodeEnt,status))!=0)
+		if((error=soReadInode(&inode,*p_nInodeEnt,IUIN))!=0)
 		{
 			return error;
 		}
 
-		//Verificar consistência da entrada de directório
-		if((soQCheckDirCont(p_sb,&inode))!=0){
-			return -EDEINVAL;
-		}
 
-		//Ver se o no-i corresponde a um atalho
+		//Ver se o no-i/entrada de directório corresponde a um atalho
 		if((inode.mode & INODE_SYMLINK)==INODE_SYMLINK)
 			{
-				//Se for só um atalho para aqui o programa
+				//Se for mais que um atalho para aqui o programa
 				if(nSymLinks==1){
 				return -ELOOP;
 			}
-
+				//Se for só um continua
 				if(nSymLinks == 0)
 			nSymLinks = 1;
 
-		//Se houver mais que um atalho, ver permissões de execução e leitura
+		// ver permissões de execução e leitura
 		if((error=soAccessGranted(*p_nInodeEnt,R+X))!=0)
 		{
 				return error;
 		}
 
-		//Ler cluster correspondente à entrada de directório	
-		if((error=soReadFileCluster(*p_nInodeEnt,p_idx/DPC,&buff))!=0)
+		//Ler cluster de dados correspondente ao atalho	
+		if((error=soReadFileCluster(*p_nInodeEnt,0,&buff))!=0)
 		{
 			return error;
 		}
 	
-		//strncpy(path,buff.info.data,MAX_PATH+1);
+		
 		memcpy(path,buff.info.data,MAX_PATH+1);
 
 		//Guardar em oldNInodeDir o valor de *p_nInodeDir(onde ficou antes do atalho)
