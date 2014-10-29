@@ -64,53 +64,57 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (411, "07;31", "soReadFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  SOInode ind;
-  SODataClust clust;
-  SOSuperBlock *p_sosb;
   int stat, i;
-  uint32_t nLogicClust, nFisicClust;
+  SOSuperBlock *p_sb;
+  SODataClust cluster;
+  uint32_t numDC, nFClust;
 
-
-  //Load do SuperBlock
-  if((stat = soLoadSuperBlock())!=0){
+  if( (stat = soLoadSuperBlock()) != 0){
     return stat;
   }
 
-  //Obter o ponteiro para o conteudo do SuperBlock
-  p_sosb = soGetSuperBlock();
+  p_sb = soGetSuperBlock();
 
-  //Validacoes
-  if(((nInode >= p_sosb->iTotal)|| nInode <= 0) || (clustInd >= MAX_FILE_CLUSTERS) || (buff == NULL)){
+  if(nInode >= p_sb->iTotal){
+    return -EINVAL;  
+  }
+
+  if(buff == NULL){
     return -EINVAL;
   }
 
-  //Obter o numero logico do cluster
-  if((stat = soHandleFileCluster(nInode, clustInd, GET, &nLogicClust)) != 0){
+  if(clustInd >= MAX_FILE_CLUSTERS){
+    return -EINVAL;
+  }
+
+  if((stat = soReadInode(&inode, nInode, IUIN)) != 0){
     return stat;
   }
 
-  if(nLogicClust == NULL_CLUSTER){
+  if((stat = soHandleFileCluster(nInode, clustInd, GET, &numDC)) != 0){
+    return stat;
+  }
+
+  if(numDC == NULL_CLUSTER){
       for(i = 0; i < BSLPC; i++)
       {
-        buff->info.data[i] = '\0';   
+        buff->info.data[i] = '\0';
       }
   }
   else{
-    nFisicClust = p_sosb->dZoneStart + nLogicClust * BLOCKS_PER_CLUSTER; 
+    nFClust = p_sb->dZoneStart + numDC * BLOCKS_PER_CLUSTER; 
 
-    if( (stat = soReadCacheCluster(nFisicClust, &clust)) != 0){
+    if( (stat = soReadCacheCluster(nFClust, &cluster)) != 0){
       return stat;
     }
 
-    /*copiar a informaçao para o buffer*/
-    memcpy(buff, &clust, sizeof(SODataClust));
+    memcpy(buff, &cluster, sizeof(SODataClust));
 
-    if((stat = soWriteCacheCluster(nFisicClust, &clust)) != 0){
+    if((stat = soWriteCacheCluster(nFClust, &cluster)) != 0){
       return stat;
     }
   }
 
-  /*gravar superBlock*/
   if( (stat = soStoreSuperBlock()) != 0){
     return stat;
   }
