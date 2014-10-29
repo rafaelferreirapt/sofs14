@@ -64,7 +64,96 @@ int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nIno
   soColorProbe (312, "07;31", "soGetDirEntryByName (%"PRIu32", \"%s\", %p, %p)\n",
                 nInodeDir, eName, p_nInodeEnt, p_idx);
 
-  /* insert your code here */
+	SOSuperBlock *p_sb;
+	SOInode p_Inode;
+	SODataClust clustDir;
+	// Variavel usada para retorno de erros
+	uint32_t status;
+	int i, j;
 
-  return -ENOSYS;
+	if((status = soLoadSuperBlock())!= 0){
+		return status;
+	}
+	
+	p_sb = soGetSuperBlock();
+
+	
+	if(nInodeDir >= p_sb->iTotal){
+		return -EINVAL;
+	}
+
+	// Verificação se o campo eName é igual a NULL ou esta vazio
+	if(eName == NULL || (strlen(eName))==0){
+		return -EINVAL;
+	}
+
+	// Verifica se a string nome excede o comprimento máximo
+	if(strlen(eName) > MAX_NAME){
+		return -ENAMETOOLONG;
+	}
+
+  	// Verifica se a string é um nome de um ficheiro e não um caminho
+	for(i=0; eName[i]!='\0';i++) {
+		if(eName[i] == '/')
+			return -EINVAL;
+   }
+
+	// Le o inode. Verifica se está em uso
+	if((status = soReadInode(&p_Inode,nInodeDir,IUIN))){
+		return status;
+	}
+
+	// Verifica se o nó-i é do tipo diretório
+	if((p_Inode.mode & INODE_TYPE_MASK) != INODE_DIR){
+		return -ENOTDIR;
+	}
+
+	if((status = soQCheckDirCont(p_sb,&p_Inode))!=0){
+		return status;
+	}
+
+	// Verifica se existe permissão de execução
+	if((status = soAccessGranted(nInodeDir,X))!=0){
+		return status;
+	}
+
+
+	// Numero de entradas de directorio
+	uint32_t numRefMax = p_Inode.size/(DPC*sizeof(SODirEntry));
+
+	for (i = 0; i < numRefMax; i++){
+		//Le o conteudo do cluster referenciado pelo inode
+		if((status = soReadFileCluster(nInodeDir,i,&clustDir))){
+			return status;
+		}
+
+    // Procura pelo nome, verificando todas as entradas de directorio
+		for (j = 0; j < DPC; j++){
+			if (strcmp((char*)(clustDir.info.de[j].name),eName)==0){
+				// Se o argumento é diferente de NULL retorna o inode referenciado pelo nome
+				if(p_nInodeEnt != NULL){ 
+					*p_nInodeEnt = (clustDir.info.de[j].nInode);
+				}
+					if(p_idx != NULL){ 
+						*p_idx =((i*DPC)+j);
+					}
+				return 0;
+			}
+
+			// Verifica se a entrada j esta free
+			if((clustDir.info.de[j].name[0] == '\0') && (clustDir.info.de[j].name[MAX_NAME] == '\0')){
+				if(p_idx != NULL){
+					*p_idx = ((i*DPC)+j);
+				}
+				return -ENOENT;
+			}
+		}
+	}
+  
+  // Se nao existir entradas free
+	if(p_idx != NULL){
+		*p_idx = (p_Inode.cluCount)*DPC;
+	}
+	
+  return -ENOENT;
 }
