@@ -70,7 +70,6 @@ int soRenameDirEntry (uint32_t nInodeDir, const char *oldName, const char *newNa
   int size;
   int stat;
   uint32_t p_idx;
-  uint32_t p_idx1;
   //uint32_t p_nInodeEnt;
 
   // obter informação do superbloco

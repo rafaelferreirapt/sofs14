@@ -84,11 +84,6 @@ int soReadFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
     return -EINVAL;
   }
 
-  //read inode, also checks consistency
-  if((stat = soReadInode(&ind, nInode, IUIN)) != 0){
-    return stat;
-  }
-
   //Obter o numero logico do cluster
   if((stat = soHandleFileCluster(nInode, clustInd, GET, &nLogicClust)) != 0){
     return stat;
