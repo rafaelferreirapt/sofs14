@@ -110,13 +110,14 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
   //Gravar conteudo do cluster
   if((stat = soStoreDirRefClust()) != 0)
       return stat;
-  
+
+  SOInode inode;
   /* código desnecessário, o q falta aqui? */
-  if((stat = soReadInode(pInode, nInode, IUIN)) != 0){
+  if((stat = soReadInode(&inode, nInode, IUIN)) != 0){
     return stat;
   }
 
-  if((stat = soWriteInode(pInode, nInode, IUIN)) != 0){
+  if((stat = soWriteInode(&inode, nInode, IUIN)) != 0){
     return stat;
   }
 
