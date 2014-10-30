@@ -83,7 +83,7 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
   SOSuperBlock* p_sb;
   SOInode inode;
   SODataClust *clust1, *clust2;
-  uint32_t stat, ind, ref_offset, ref_Soffset, ref_Doffset, status;
+  uint32_t stat, ind, ref_offset, ref_Soffset, ref_Doffset;
 
   if((stat = soLoadSuperBlock())){
   	return stat;
