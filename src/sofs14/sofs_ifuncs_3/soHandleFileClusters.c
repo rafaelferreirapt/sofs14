@@ -83,7 +83,7 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
   SOSuperBlock* p_sb;
   SOInode inode;
   SODataClust *clust1, *clust2;
-  uint32_t stat, ind, ref_offset, ref_Soffset, ref_Doffset, status;
+  uint32_t stat, ind, ref_offset, ref_Soffset, ref_Doffset;
 
   if((stat = soLoadSuperBlock())){
   	return stat;
@@ -107,12 +107,10 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
     if ((stat=soReadInode(&inode,nInode,FDIN))!=0){
       return stat;
     }
-    status = FDIN;
   }else{
     if ((stat=soReadInode(&inode,nInode,IUIN))!=0){
       return stat;
     }
-    status = IUIN;
   }
 
   /*Referencas Duplamente Indirectas*/
@@ -123,7 +121,7 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
       return stat; 
     }
 
-    clust2 = soGetSngIndRefClust(); //pointer to the contents of a specific cluster of the table of single indirect references
+    clust2 = soGetSngIndRefClust(); 
 
     ind = N_DIRECT + RPC; //tamanho da tabela das referencias simplesmentre indirectas
 
