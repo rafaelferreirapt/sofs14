@@ -24,7 +24,7 @@
 
 /* Allusion to external function */
 
-int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nInodeEnt, uint32_t *p_idx);
+ int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nInodeEnt, uint32_t *p_idx);
 
 /** \brief operation add a generic entry to a directory */
 #define ADD         0
@@ -50,7 +50,7 @@ int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nIno
  *  character '/'. Besides there should not already be any entry in the directory whose <em>name</em> field is
  *  <tt>eName</tt>.
  *
- *  The <em>refcount</em> field of the inode associated to the entry to be added / updated and, when required, of the
+ *  The <em>refCount</em> field of the inode associated to the entry to be added / updated and, when required, of the
  *  inode associated to the directory are updated. This may also happen to the <em>size</em> field of either or both
  *  inodes.
  *
@@ -86,17 +86,256 @@ int soGetDirEntryByName (uint32_t nInodeDir, const char *eName, uint32_t *p_nIno
  *  \return -<em>other specific error</em> issued by \e lseek system call
  */
 
-int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt, uint32_t op)
-{
+ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt, uint32_t op)
+ {
   soColorProbe (313, "07;31", "soAddAttDirEntry (%"PRIu32", \"%s\", %"PRIu32", %"PRIu32")\n", nInodeDir,
-                eName, nInodeEnt, op);
+    eName, nInodeEnt, op);
 
-  	int stat;
-  	SOSuperBlock *p_sosb;
-  	SODataClust *pClust;
-  	SOInode *pInodeDir;
-  	uint32_t *pIdx, outVal, clustIdx, dirEntryIdx;
+  int stat,i;
+  SOSuperBlock *p_sosb;
+  uint32_t idx,outVal,clustIdx,dirEntryIdx;
+  SODataClust dClust;
+  SOInode inodeDir;
+  SOInode inodeEnt;
 
-  	
+    /*obtencao ponteiro para super bloco*/
+  if ((stat = soLoadSuperBlock ()) != 0){
+    return stat;
+  }
+
+  if ((p_sosb = soGetSuperBlock ()) == NULL){
+    return -EBADF;
+  }
+
+    /*Validacao de conformidade*/
+  if(((op != ATTACH) && (op != ADD)) || (nInodeDir > p_sosb->iTotal) || (nInodeEnt > p_sosb->iTotal) || (eName == NULL) || (strlen(eName)==0) ){
+    return -EINVAL;
+  }
+  
+
+    /*validacao nome*/
+  if(strlen(eName) > MAX_NAME){
+    return -ENAMETOOLONG;
+  }
+
+    /*leitura e validacao do inode*/
+  if((stat=soReadInode(&inodeDir, nInodeDir,IUIN))!=0){
+    return stat;
+  }
+
+  if((inodeDir.mode & INODE_DIR) != INODE_DIR){
+    return -ENOTDIR;
+  }
+
+    /* verificacao de permicoes de leitura e escrita*/
+  if((stat=soAccessGranted(nInodeDir,X))!=0){
+    return -EACCES;
+  }
+
+  if((stat=soAccessGranted(nInodeDir,W))!=0){
+    return -EPERM;
+  }
+
+    /* ver se ja atingiu tamanho maximo*/
+  if(inodeDir.size >= MAX_FILE_SIZE){
+    return -EFBIG;
+  }
+
+    /*verifica se podem ser colocadas mais referencias*/
+  if(inodeDir.refCount == 0xFFFF){
+    return -EMLINK;
+  }
+
+    /* verificar se ja existe alguma entrada de directorio com eName*/
+  stat = soGetDirEntryByName(nInodeDir,eName,NULL, &idx);
+
+  if(stat == 0){
+    return -EEXIST;
+  }
+  
+  clustIdx  = idx/DPC;
+  dirEntryIdx = idx%DPC;
+
+  /*get do data cluster com a entrada de diretorio*/
+  if((stat=soHandleFileCluster(nInodeDir,clustIdx,GET,&outVal))!=0){
+    return stat;
+  }
+
+  /*so aloca o cluster se nao estiver alocado*/
+  if(outVal==NULL_CLUSTER)
+  {
+    if((stat=soHandleFileCluster(nInodeDir,clustIdx,ALLOC,&outVal))!=0){
+      return stat;
+    }
+
+    if((stat=soReadFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat;
+    }
+
+    /* preenchimento de todas as entradas de diretorio do datacluster*/
+    for(i=0; i<DPC; i++)
+    {
+      dClust.info.de[i].nInode = NULL_INODE;
+      memset(&(dClust.info.de[i].name),0x00, MAX_NAME+1);
+    }
+
+    if((stat=soWriteFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat;
+    }
+
+    /*atualizacao do tamanho do inode*/
+    if((stat=soReadInode(&inodeDir, nInodeDir,IUIN))!=0){
+      return stat;
+    }
+
+    inodeDir.size += sizeof(SODirEntry)*DPC;
+
+    if((stat=soWriteInode(&inodeDir, nInodeDir,IUIN))!=0){
+      return stat;
+    }
+  }
+
+  //**********ADD***********
+  if(op == ADD){
+    
+    /*ler Cluster*/
+    if((stat=soReadFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat;
+    }
+
+    /*escrita da nova entrada de diretorio*/
+    dClust.info.de[dirEntryIdx].nInode = nInodeEnt;
+
+    strcpy((char*)dClust.info.de[dirEntryIdx].name, eName);
+
+    if((stat=soWriteFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat;
+    }
+
+    /*leitura do inode correspondente a entrada de diretorio*/
+    if((stat=soReadInode(&inodeEnt, nInodeEnt,IUIN))!=0){
+      return stat;
+    }
+
+    /*caso o inodeEnt seja diretorio*/
+    if((inodeEnt.mode & INODE_DIR) == INODE_DIR)
+    {
+      /*veirfica se a entrada de diretorio esta criada*/
+      if(inodeEnt.cluCount == 0)
+      {
+        if((stat=soHandleFileCluster(nInodeEnt,0,ALLOC,&outVal))!=0){
+          return stat;
+        }
+
+        if((stat=soReadFileCluster(nInodeEnt,0,&dClust))!=0){
+          return stat;
+        }
+
+        /*preenchimento das entradas do datacluster*/
+        strcpy((char *) dClust.info.de[0].name, ".");
+        strcpy((char *) dClust.info.de[1].name, "..");
+        dClust.info.de[0].nInode = nInodeEnt;
+        dClust.info.de[1].nInode = nInodeDir;
+
+        for(i=2; i<DPC; i++)
+        {
+          dClust.info.de[i].nInode = NULL_INODE;
+          memset(&(dClust.info.de[i].name),0x00, MAX_NAME+1);
+        }
+
+        if((stat=soWriteFileCluster(nInodeEnt,0,&dClust))!=0){
+          return stat;
+        }
+
+        /* campos refCount e size do inode correspondente a entrade de diretorio sao atualizados*/
+        if((stat=soReadInode(&inodeEnt, nInodeEnt,IUIN))!=0)
+          return stat;
+
+        inodeEnt.refCount = 2;
+
+        inodeEnt.size = sizeof(SODirEntry)*DPC;
+
+        if((stat=soWriteInode(&inodeEnt,nInodeEnt,IUIN))!=0){
+          return stat;
+        }
+
+        /*refCount do inode correspondente ao diretorio é atualizado*/
+        if((stat=soReadInode(&inodeDir, nInodeDir,IUIN))!=0){
+          return stat;
+        }
+
+        inodeDir.refCount++;
+
+        if((stat=soWriteInode(&inodeDir, nInodeDir,IUIN))!=0){
+          return stat;
+        }
+      }
+      else
+      {
+        /*atualização do campo refCount do inode correspondente a entrada de diretorio*/
+        if((stat=soReadInode(&inodeEnt, nInodeEnt,IUIN))!=0){
+          return stat;
+        }
+        inodeEnt.refCount++;
+        if((stat=soWriteInode(&inodeEnt, nInodeEnt,IUIN))!=0){
+          return stat;
+        }
+      }
+    }
+    else
+    {
+      /*atualização do campo refCount do inode correspondente a entrada de diretorio*/
+      inodeEnt.refCount++;
+      if((stat=soWriteInode(&inodeEnt, nInodeEnt,IUIN))!=0){
+        return stat;
+      }
+      return 0;
+    }
+
+    return 0;
+  }
+  
+
+  //****ATTATCH****
+  else{
+    
+    /*leitura e validacao do inode tem de ser diretorio*/
+    if((stat=soReadInode(&inodeEnt, nInodeEnt,IUIN))!=0){
+      return stat;
+    }
+
+    if((inodeEnt.mode & INODE_DIR) != INODE_DIR){
+      return -ENOTDIR;
+    }
+
+    /*leitura do datacluster*/
+    if((stat=soReadFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat;
+    }
+
+    /*escrita da nova entrada de diretorio*/
+    dClust.info.de[dirEntryIdx].nInode = nInodeEnt;
+
+    strcpy((char*)dClust.info.de[dirEntryIdx].name, eName);
+
+    if((stat=soWriteFileCluster(nInodeDir,clustIdx,&dClust))!=0){
+      return stat; 
+    }
+
+    /*refCount do inode correspondente ao diretorio é atualizado*/
+    if((stat=soReadInode(&inodeDir, nInodeDir,IUIN))!=0){
+      return stat;
+    }
+
+    inodeDir.refCount++;
+
+    if((stat=soWriteInode(&inodeDir, nInodeDir,IUIN))!=0){
+      return stat;
+    }
+
+    return 0;
+  }
+
   return 0;
+
 }
