@@ -64,56 +64,66 @@ int soWriteFileCluster (uint32_t nInode, uint32_t clustInd, SODataClust *buff)
 {
   soColorProbe (412, "07;31", "soWriteFileCluster (%"PRIu32", %"PRIu32", %p)\n", nInode, clustInd, buff);
 
-  SODataClust *pCluster;
-  SOSuperBlock *p_sosb;
-  uint32_t nLogicClust;
-  int stat;
-
-  //Load do SuperBlock
-  if((stat = soLoadSuperBlock()) != 0){
-    return stat;
-  }
-
-  //Obter o ponteiro para o conteudo do SuperBlock
-  p_sosb = soGetSuperBlock();
-
-  //Validacao de conformidade
-  if (((nInode >= p_sosb->iTotal)|| nInode <= 0) || (clustInd > MAX_FILE_CLUSTERS) || (buff == NULL)){
-    return -EINVAL;
-  }
+  int stat; //variavel para o estado de erro
+  uint32_t numDC; //variavel para numero dataclusters
+  SODataClust *p_dc; //ponteiro para datacluster
+  SOSuperBlock *p_sb; //ponteiro para o superbloco
   
-  //Obter o numero logico do cluster
-  if((stat = soHandleFileCluster (nInode, clustInd, GET, &nLogicClust)) != 0){
-    return stat;
-  }
+  //Ler e carregar o Super Bloco
+  if((stat = soLoadSuperBlock()) != 0)
+          return stat;
+  
+  p_sb = soGetSuperBlock();
+  
+  //Verificar parametros clustInd e buff
+  if(clustInd >= MAX_FILE_CLUSTERS) 
+      return -EINVAL;
+  
+  //Verificar parametros do buff
+  if(buff == NULL)
+      return -EINVAL;
+  
+  //Verificar parametros do nInode
+  if(nInode > p_sb->iTotal)
+      return -EINVAL;
 
-  //Se o cluster ainda nao tiver sido alocado, utiliza-se a funcao handleFileCluster para o fazer
-  if(nLogicClust == NULL_CLUSTER){
-    if((stat = soHandleFileCluster (nInode, clustInd, ALLOC, &nLogicClust)) != 0){
+  //Obter numero logico do cluster
+  if((stat = soHandleFileCluster(nInode, clustInd, GET, &numDC)) != 0)
       return stat;
-    }
+  
+  //Se não houver um cluster associado
+  if(numDC == NULL_CLUSTER){
+      if((stat = soHandleFileCluster(nInode, clustInd, ALLOC, &numDC)) != 0)
+          return stat;
+  }
+  
+  //Carrega o conteudo do cluster especifico
+  if((stat = soLoadDirRefClust(p_sb->dZoneStart+numDC*BLOCKS_PER_CLUSTER)) != 0)
+      return stat;
+  
+  //Obter ponteiro para referencia do datacluster
+  p_dc = soGetDirRefClust();
+  
+  //Copiar info do buff para o datacluster
+  p_dc->info=buff->info;
+
+  //Gravar conteudo do cluster
+  if((stat = soStoreDirRefClust()) != 0)
+      return stat;
+
+  SOInode inode;
+  /* código desnecessário, o q falta aqui? */
+  if((stat = soReadInode(&inode, nInode, IUIN)) != 0){
+    return stat;
   }
 
-  //Carrega o conteudo do cluster especifico
-  if((stat = soLoadDirRefClust(p_sosb->dZoneStart+nLogicClust*BLOCKS_PER_CLUSTER)) != 0){
+  if((stat = soWriteInode(&inode, nInode, IUIN)) != 0){
     return stat;
   }
-  
-  //Obter ponteiro para o cluster
-  pCluster = soGetDirRefClust();
-  
-  //Copiar dados do buff para o cluster
-  pCluster->info = buff->info;
-  
-  //Gravar cluster
-  if((stat = soStoreDirRefClust()) != 0){
-    return stat;
-  }
-  
-  //Gravar SuperBlock
-  if((stat = soStoreSuperBlock()) != 0){
-    return stat;
-  }
+
+  //Gravar conteudo do Super Bloco
+  if((stat = soStoreSuperBlock()) != 0)
+      return stat;
   
   return 0;
 
