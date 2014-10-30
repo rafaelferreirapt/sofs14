@@ -80,10 +80,10 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
 {
   soColorProbe (414, "07;31", "soHandleFileClusters (%"PRIu32", %"PRIu32", %"PRIu32")\n", nInode, clustIndIn, op);
 
-  SOSuperBlock *p_sb;
+  SOSuperBlock* p_sb;
   SOInode inode;
-  uint32_t stat, *p_outVal = NULL;
-  int i = clustIndIn;
+  SODataClust *clust1, *clust2;
+  uint32_t stat, ind, ref_offset, ref_Soffset, ref_Doffset, status;
 
   if((stat = soLoadSuperBlock())){
   	return stat;
@@ -95,34 +95,93 @@ int soHandleFileClusters (uint32_t nInode, uint32_t clustIndIn, uint32_t op)
   	return -EINVAL;
   }
 
-  if(clustIndIn > MAX_FILE_CLUSTERS){
+  if(clustIndIn >= MAX_FILE_CLUSTERS){
   	return -EINVAL;
   }
 
-  if(op != FREE && op != FREE_CLEAN && op != CLEAN){
+  if(op < 2 || op > 4){
   	return -EINVAL;
   }
 
-  if ((stat=soReadInode(&inode,nInode,IUIN))!=0)
-  {
-    return stat;
+  if(op == CLEAN){
+    if ((stat=soReadInode(&inode,nInode,FDIN))!=0){
+      return stat;
+    }
+    status = FDIN;
+  }else{
+    if ((stat=soReadInode(&inode,nInode,IUIN))!=0){
+      return stat;
+    }
+    status = IUIN;
   }
 
-  if ((stat=soReadInode(&inode,nInode,FDIN))!=0)
-  {
-    return stat;
+  /*Referencas Duplamente Indirectas*/
+
+  if(inode.i2 != NULL_CLUSTER){
+
+    if ((stat = soLoadSngIndRefClust((inode.i2 * BLOCKS_PER_CLUSTER) + p_sb->dZoneStart)) != 0){
+      return stat; 
+    }
+
+    clust2 = soGetSngIndRefClust(); //pointer to the contents of a specific cluster of the table of single indirect references
+
+    ind = N_DIRECT + RPC; //tamanho da tabela das referencias simplesmentre indirectas
+
+    for(;inode.i2 != NULL_CLUSTER && ind < MAX_FILE_CLUSTERS;){
+      ref_Soffset = (ind - (RPC + N_DIRECT)) / RPC;
+      ref_Doffset = (ind - N_DIRECT - RPC) % RPC;
+
+      if(clust2->info.ref[ref_Soffset] != NULL_CLUSTER){
+        if((stat = soLoadDirRefClust((clust2->info.ref[ref_Soffset]* BLOCKS_PER_CLUSTER) + p_sb->dZoneStart)) != 0){
+          return stat;
+        }
+
+        clust1 = soGetDirRefClust();
+
+        for(; ref_Doffset < RPC; ref_Doffset++, ind++){
+          if(clust1->info.ref[ref_Doffset] != NULL_CLUSTER && clustIndIn <= ind){
+            if((stat = soHandleFileCluster(nInode, ind, op, NULL)) != 0){
+              return stat;
+            }
+          }
+        }
+      }else{
+        ind += RPC;
+      }
+    }
   }
 
+  /*Referencias Simplesmente Indirectas*/
 
-  for (; i < MAX_FILE_CLUSTERS ; ++i){
-  	if((stat = soHandleFileCluster(nInode, i, GET, p_outVal))){
-		return stat;
-  	}
-  	if(*p_outVal != NULL_CLUSTER){
-  		if((stat = soHandleFileCluster(nInode, i, op, p_outVal))){
-  			return stat;
-  		}
-  	}
+  if(inode.i1 != NULL_CLUSTER){
+    if((stat = soLoadDirRefClust((inode.i1 * BLOCKS_PER_CLUSTER) + p_sb->dZoneStart)) != 0){
+      return stat;
+    }
+    clust1  = soGetDirRefClust();
+
+    ind = N_DIRECT;
+
+    for(; inode.i1 != NULL_CLUSTER && ind < N_DIRECT + RPC;ind++){
+      ref_offset = ind - N_DIRECT;
+
+      if(clust1->info.ref[ref_offset] != NULL_CLUSTER && clustIndIn <= ind){
+        if((stat = soHandleFileCluster(nInode, ind, op, NULL)) != 0 ){
+          return stat;
+        }
+      }
+    }
+  }
+
+  /*Referencias Directas*/
+
+  ind = 0;
+
+  for(; ind < N_DIRECT; ind++){
+    if(inode.d[ind] != NULL_CLUSTER && clustIndIn <= ind){
+      if((stat = soHandleFileCluster(nInode, ind, op, NULL)) != 0){
+        return stat;
+      }
+    }
   }
 
   return 0;

@@ -64,15 +64,18 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 {
 	soColorProbe (613, "07;33", "soAllocDataCluster (%"PRIu32", %p)\n", nInode, p_nClust);
 
-	//if(p_nClust == NULL)
-	//{
-	//	return -EINVAL;
-	//}
-
+	
 	SOSuperBlock *p_sb;		// Ponteiro para o SuperBlock
 	SODataClust cluster;		// Criar um cluster
 	int status;
-	uint32_t pAddress;
+	SOInode *inode;
+	uint32_t nBlk, offset;
+
+
+  if(p_nClust == NULL)
+  {
+    return -EINVAL;
+  }
 
 	if((status = soLoadSuperBlock()) != 0) 	// Faz o load do SuperBlock para armazenamento interno
 		return status; 
@@ -85,7 +88,25 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	if(p_sb->dZoneFree == 0)				// Verifica se existe data clusters livre
 		return -ENOSPC;
 
-	if(p_sb->dZoneRetriev.cacheIdx == DZONE_CACHE_SIZE) {	
+	if((status=soConvertRefInT(nInode,&nBlk,&offset))!=0)
+	{
+		return status;
+	}
+
+	if((status=soLoadBlockInT(nBlk))!=0)
+	{
+		return status;
+	}
+
+	inode=soGetBlockInT();
+
+	if(soQCheckFInode(&inode[offset])==0)
+	{
+		return -EIUININVAL;
+	}
+
+	if(p_sb->dZoneRetriev.cacheIdx == DZONE_CACHE_SIZE) 
+	{	
 		if((status = soReplenish(p_sb)) !=0)					// Cache vazia entao replenish 	
 			return status;
 	}
@@ -95,6 +116,10 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 	p_sb->dZoneRetriev.cacheIdx += 1;
 	p_sb->dZoneFree -= 1;
 
+	if((status = soReadCacheCluster(p_sb->dZoneStart+(*p_nClust*BLOCKS_PER_CLUSTER),&cluster)) != 0)
+	{	// Escrita no cluster
+		return status;
+	}
 	cluster.prev = cluster.next = NULL_CLUSTER;
 	
 	if(cluster.stat != NULL_INODE){ /* it is, clean it */
@@ -103,14 +128,16 @@ int soAllocDataCluster (uint32_t nInode, uint32_t *p_nClust)
 		}
 	}
 
-	cluster.stat = nInode;
 
-	pAddress = p_sb->dZoneStart+(*p_nClust)*BLOCKS_PER_CLUSTER;
+	cluster.stat = nInode;
 	
-	if((status = soWriteCacheCluster(pAddress,&cluster)) != 0)	// Escrita no cluster
+	if((status = soWriteCacheCluster(p_sb->dZoneStart+(*p_nClust*BLOCKS_PER_CLUSTER),&cluster)) != 0)
+	{	// Escrita no cluster
 		return status;
-	
-	if((status=soStoreSuperBlock()) != 0){ 
+	}
+
+	if((status=soStoreSuperBlock()) != 0)
+	{ 
 		return status;
 	}
 	
@@ -134,6 +161,11 @@ int soReplenish (SOSuperBlock *p_sb)
 {
 
 	uint32_t nctt;
+	if(p_sb == NULL)
+	{
+		return -EINVAL;
+	}
+
 
 	if ( p_sb->dZoneFree < DZONE_CACHE_SIZE )
 	{
@@ -146,7 +178,8 @@ int soReplenish (SOSuperBlock *p_sb)
 	}
 
 	uint32_t nLCluster = p_sb->dHead;
-	SODataClust cluster;		/*invocação de um cluster*/
+	int result = 0;
+	SODataClust dc;		/*invocação de um cluster*/
 	int n;
 
 	for (n = DZONE_CACHE_SIZE - nctt; n < DZONE_CACHE_SIZE; n++)
@@ -154,34 +187,66 @@ int soReplenish (SOSuperBlock *p_sb)
 		if ( nLCluster == NULL_CLUSTER)
 			break;
 		p_sb->dZoneRetriev.cache[n] = nLCluster;
-		nLCluster =  cluster.next;
-		cluster.prev = cluster.next = NULL_CLUSTER;
+		if((result=soReadCacheCluster((p_sb->dZoneRetriev.cache[n]*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart, &dc))!=0)
+		{
+			return result;
+		}
+		nLCluster =  dc.next;
+		dc.prev = dc.next = NULL_CLUSTER;
+		if((result=soWriteCacheCluster((p_sb->dZoneRetriev.cache[n]*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart,&dc))!=0)
+		{
+			return result;
+		}
 	}
 
 	if (n != DZONE_CACHE_SIZE)
 	{
 		p_sb->dHead = p_sb->dTail = NULL_CLUSTER;
 
-		uint32_t result = soDeplete(p_sb);
-		if (result != 0)
-			return result;		/* se nao resultar em sucesso devolver o resultado*/
+		if((result = soDeplete(p_sb))!=0)
+		{
+			return result;
+		}
 
 		nLCluster = p_sb->dHead;
 
 		for ( ; n < DZONE_CACHE_SIZE; n++)
 		{
-			p_sb->dZoneRetriev.cache[n] = nLCluster;	/*atribuição do cluster anterior para a cahce de retirada*/
-			nLCluster = cluster.next;	/*nLCluster fica com o cluster actual*/
-			cluster.prev = cluster.next = NULL_CLUSTER;
+			p_sb->dZoneRetriev.cache[n] = nLCluster;	/*atribuição do cluster anterior para a cache de retirada*/
+			if((result=soReadCacheCluster((p_sb->dZoneRetriev.cache[n]*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart,&dc))!=0)
+			{
+				return result;
+			}
+			nLCluster = dc.next;	/*nLCluster fica com o cluster actual*/
+			dc.prev = dc.next = NULL_CLUSTER;
+			if((result=soWriteCacheCluster((p_sb->dZoneRetriev.cache[n]*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart,&dc))!=0)
+			{
+				return result;
+			}
 		}
+	}
+	if (nLCluster == NULL_CLUSTER)
+	{
+		p_sb->dTail = NULL_CLUSTER;
+		p_sb->dHead = NULL_CLUSTER;
+	}
+	else
+	{
+		p_sb->dHead = nLCluster;
 	}
 
 	if (nLCluster != NULL_CLUSTER)
-		cluster.prev = NULL_CLUSTER;
+	{
+		if((result=soReadCacheCluster((p_sb->dHead*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart,&dc))!=0)
+		{
+			return result;
+		}
+		dc.prev = NULL_CLUSTER;
+		if((result=soWriteCacheCluster((p_sb->dHead*BLOCKS_PER_CLUSTER)+p_sb->dZoneStart,&dc))!=0)
+		{
+			return result;
+		}
+	}
 	p_sb->dZoneRetriev.cacheIdx = DZONE_CACHE_SIZE - nctt;
-	p_sb->dHead = nLCluster;
-	if (nLCluster == NULL_CLUSTER)
-		p_sb->dTail = NULL_CLUSTER;
-
 	return 0;
 }
