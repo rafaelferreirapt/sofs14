@@ -19,6 +19,35 @@ filter_bin()
 {
     sed -r 's/_bin//'
 }
+val(){
+	#com o makefile do prof (Makefile)
+	cd ../src/sofs14
+	mv Makefile.prof Makefile
+	cd ../../
+	make
+	cd src/sofs14
+	mv Makefile Makefile.prof
+	cd ../../test
+	for (( i = 1; i <= 7; i++ )); do
+		./val$i.sh > valTest$i.rst
+	done
+	mv *.rst profRaw
+	cd ../src/sofs14
+
+	#com o makefile do prof (Makefile)
+	mv Makefile.ours Makefile
+	cd ../../
+	make
+	cd src/sofs14
+	mv Makefile Makefile.ours
+	cd ../../test
+	for (( i = 1; i <= 7; i++ )); do
+		./val$i.sh > valTest$i.rst
+	done
+	mv *.rst oursRaw
+	cd ../src/sofs14
+	cp Makefile.prof Makefile
+}
 
 if [[ "$1" == "1" ]]; then
 	FROM=1
@@ -32,6 +61,9 @@ elif [[ "$1" == "3" ]]; then
 elif [[ "$1" == "4" ]]; then
 	FROM=12
 	TO=16
+elif [[ "$1" == "5" ]]; then
+	val
+	exit
 else
 	FROM=1
 	TO=16
