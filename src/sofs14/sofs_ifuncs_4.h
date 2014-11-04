@@ -192,7 +192,8 @@ extern int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nIn
  *
  *  The file described by the inode associated to the entry to be removed / detached is only deleted from the file
  *  system if the <em>refcount</em> field becomes zero (there are no more hard links associated to it) and the operation
- *  is removal. In this case, the data clusters that store the file contents and the inode itself must be freed.
+ *  is either removal or is not a directory. In this case, the data clusters that store the file contents and the inode
+ *  itself must be freed.
  *
  *  The process that calls the operation must have write (w) and execution (x) permissions on the directory.
  *

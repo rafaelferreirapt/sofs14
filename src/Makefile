@@ -4,6 +4,8 @@ subdirs += showBlock14
 subdirs += sofs14
 subdirs += mkfs14
 subdirs += testifuncs14
+subdirs += syscalls14
+subdirs += mount14
 
 .PHONY: $(subdirs)
 
