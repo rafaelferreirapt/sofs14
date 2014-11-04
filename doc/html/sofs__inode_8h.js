@@ -1,0 +1,27 @@
+var sofs__inode_8h =
+[
+    [ "inodeFirst", "unioninode_first.html", "unioninode_first" ],
+    [ "inodeSecond", "unioninode_second.html", "unioninode_second" ],
+    [ "soInode", "structso_inode.html", "structso_inode" ],
+    [ "INODE_DIR", "sofs__inode_8h.html#ac91dac7b57d5fd587e5defb077c926bb", null ],
+    [ "INODE_EX_GRP", "sofs__inode_8h.html#a8bf55e2ff68f7ad07712b82c460add30", null ],
+    [ "INODE_EX_OTH", "sofs__inode_8h.html#a444c4a53136790d7ede54658d7381c68", null ],
+    [ "INODE_EX_USR", "sofs__inode_8h.html#a596198ac7074f059648f556d5d94f884", null ],
+    [ "INODE_FILE", "sofs__inode_8h.html#a5102910257b323d652aa13684891187e", null ],
+    [ "INODE_FREE", "sofs__inode_8h.html#ab18cc14c3bba6faade76ddd6f018bb41", null ],
+    [ "INODE_RD_GRP", "sofs__inode_8h.html#ac580582613367c363fb8e83bd7fc2bda", null ],
+    [ "INODE_RD_OTH", "sofs__inode_8h.html#ad69534484049a54921ee4d42d831a15a", null ],
+    [ "INODE_RD_USR", "sofs__inode_8h.html#aba312c3d420e70bfebf04c9f5d36640d", null ],
+    [ "INODE_SYMLINK", "sofs__inode_8h.html#a212a3618ff6472099ef7094c9bbf05b3", null ],
+    [ "INODE_TYPE_MASK", "sofs__inode_8h.html#ae5de79aca336e3a253eed8b98c3e39ae", null ],
+    [ "INODE_WR_GRP", "sofs__inode_8h.html#a71248ff0d42b6bb2e2be23e75e2055fc", null ],
+    [ "INODE_WR_OTH", "sofs__inode_8h.html#acdf675dcd0621eb0ed3c87ca72eeac56", null ],
+    [ "INODE_WR_USR", "sofs__inode_8h.html#a17d69a80ca67eebaa91764e03e7e722a", null ],
+    [ "IPB", "sofs__inode_8h.html#aadb6c866a6d0a173f5f0a6ed9c7e0228", null ],
+    [ "MAX_CLUSTER_COUNT", "sofs__inode_8h.html#aee6a69c34fb9691104d284d8bf94331c", null ],
+    [ "MAX_FILE_CLUSTERS", "sofs__inode_8h.html#ab0dd828559595268b05668188b5785bd", null ],
+    [ "MAX_FILE_SIZE", "sofs__inode_8h.html#a649ad5274d988d17a275a3cead056746", null ],
+    [ "N_DIRECT", "sofs__inode_8h.html#a30dda5e1ae12ca810465461afe868e89", null ],
+    [ "NULL_INODE", "sofs__inode_8h.html#a126a931e3d4d7447938f5897d9e5974f", null ],
+    [ "SOInode", "sofs__inode_8h.html#ac75a291739fb635e97b7928ceb4fba6a", null ]
+];
