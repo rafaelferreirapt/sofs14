@@ -99,8 +99,7 @@ int soWriteInode (SOInode *p_inode, uint32_t nInode, uint32_t status)
 		if ((stat = soQCheckInodeIU(p_sb, p_inode)) != 0){
 			return stat;
 		}
-		p_inode->vD1.aTime = time(NULL);       
-		p_inode->vD2.mTime = time(NULL);
+		p_inode->vD1.aTime = p_inode->vD2.mTime = time(NULL);
 		// Actualização do tempo do último acesso e do tempo da última modificação (apenas quando se trata de um nó-i em uso!!!)
 
 	}else if(status == FDIN){   // Se o nó-i está no estado sujo...
