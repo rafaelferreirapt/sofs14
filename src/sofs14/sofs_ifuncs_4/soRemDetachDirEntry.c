@@ -109,9 +109,15 @@ int soRemDetachDirEntry (uint32_t nInodeDir, const char *eName, uint32_t op)
 	Precisamos de permissões de escrita e execução
   */
   if((stat = soAccessGranted(nInodeDir, X))){
+  	if(stat = -EACCES){
+  		return -EPERM;
+  	}
 	return stat;
   }
   if((stat = soAccessGranted(nInodeDir, W))){
+  	if(stat = -EACCES){
+  		return -EPERM;
+  	}
 	return stat;
   }
 
