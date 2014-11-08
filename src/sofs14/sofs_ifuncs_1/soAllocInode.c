@@ -157,8 +157,7 @@ int soAllocInode (uint32_t type, uint32_t* p_nInode)
 	p_iNode[offset].group = getgid();
 	p_iNode[offset].size = 0;
 	p_iNode[offset].cluCount = 0;
-	p_iNode[offset].vD1.aTime = time(NULL);
-	p_iNode[offset].vD2.mTime = time(NULL);
+	p_iNode[offset].vD1.aTime = p_iNode[offset].vD2.mTime = time(NULL);
 
 	int i;
 	for(i=0; i<N_DIRECT; i++){
