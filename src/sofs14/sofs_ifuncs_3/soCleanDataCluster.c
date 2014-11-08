@@ -1,7 +1,7 @@
 /**
  *  \file soCleanDataCluster.c (implementation file)
  *
- *  \author
+ *  \author  José Silva, Marco Leite, Xavier Soares
  */
 
 #include <stdio.h>

@@ -1,7 +1,7 @@
 /**
  *  \file soWriteInode.c (implementation file)
  *
- *  \author
+ *  \author José Silva
  */
 
 #include <stdio.h>

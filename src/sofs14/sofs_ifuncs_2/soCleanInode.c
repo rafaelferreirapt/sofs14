@@ -1,7 +1,7 @@
 /**
  *  \file soCleanInode.c (implementation file)
  *
- *  \author
+ *  \author Marco Leite
  */
 
 #include <stdio.h>

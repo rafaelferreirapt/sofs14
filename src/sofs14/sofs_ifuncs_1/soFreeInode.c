@@ -1,7 +1,7 @@
 /**
  *  \file soFreeInode.c (implementation file)
  *
- *  \author
+ *  \author Rodrigo
  */
 
 #include <stdio.h>

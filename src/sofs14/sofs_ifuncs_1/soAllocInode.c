@@ -1,7 +1,7 @@
 /**
  *  \file soAllocInode.c (implementation file)
  *
- *  \author
+ *  \author Rafael Ferreira
  */
 
 #include <stdio.h>

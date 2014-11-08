@@ -1,7 +1,7 @@
 /**
  *  \file soRenameDirEntry.c (implementation file)
  *
- *  \author
+ *  \author Xavier Soares
  */
 
 #include <stdio.h>

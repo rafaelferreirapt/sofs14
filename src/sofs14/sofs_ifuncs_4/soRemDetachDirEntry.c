@@ -1,7 +1,7 @@
 /**
  *  \file soAddAttDirEntry.c (implementation file)
  *
- *  \author
+ *  \author Rafael Ferreira e Rodrigo Cunha
  */
 
 #include <stdio.h>

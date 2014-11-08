@@ -1,7 +1,7 @@
 /**
  *  \file soFreeDataCluster.c (implementation file)
  *
- *  \author
+ *  \author Marco
  */
 
 #include <stdio.h>

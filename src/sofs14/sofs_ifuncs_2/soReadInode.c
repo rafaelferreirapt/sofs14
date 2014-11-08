@@ -1,7 +1,7 @@
 /**
  *  \file soReadInode.c (implementation file)
  *
- *  \author
+ *  \author Xavier Soares
  */
 
 /* #define CLEAN_INODE */

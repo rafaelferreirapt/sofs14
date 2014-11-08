@@ -1,7 +1,8 @@
 /**
  *  \file soAllocDataCluster.c (implementation file)
  *
- *  \author
+ *  \author: soReplenish Xavier
+ * 			 soAllocDataCluster José Silva
  */
 
 #include <stdio.h>

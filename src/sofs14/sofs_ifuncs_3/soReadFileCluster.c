@@ -1,7 +1,7 @@
 /**
  *  \file soReadFileCluster.c (implementation file)
  *
- *  \author
+ *  \author Bernardo Ferreira
  */
 
 #include <stdio.h>
