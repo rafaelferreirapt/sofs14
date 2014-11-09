@@ -1,7 +1,8 @@
 /**
  *  \file soFreeDataCluster.c (implementation file)
  *
- *  \author Marco
+ *  \author: soDeplete Bernardo
+ * 			 soFreeDataCluster Marco
  */
 
 #include <stdio.h>
@@ -86,12 +87,12 @@ int soFreeDataCluster (uint32_t nClust)
 				return error;
 				}
 	clust.prev=clust.next=NULL_CLUSTER;
-	
+
 	if((error=soWriteCacheCluster(p_sb->dZoneStart+nClust*BLOCKS_PER_CLUSTER,&clust))!=0){
 		return error;
 			}
 
-	
+
 	//the insertion cache is full, deplete it*/
 
 	if(p_sb->dZoneInsert.cacheIdx==DZONE_CACHE_SIZE){
