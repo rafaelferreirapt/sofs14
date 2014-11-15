@@ -402,7 +402,7 @@ int soHandleSIndirect(SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uin
 
             if (p_dc->stat != nInode){
                 return -EWGINODENB;
-            }
+            } 
 
             if (op != CLEAN) {
                 if ((stat = soFreeDataCluster(p_dc->info.ref[ref_offset])) != 0){
