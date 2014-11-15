@@ -64,6 +64,11 @@ elif [[ "$1" == "4" ]]; then
 elif [[ "$1" == "5" ]]; then
 	val
 	exit
+elif [[ "$1" == "-t" ]]; then
+	echo "TEST VECTOR: "
+	read input
+	FROM = input
+	TO = input
 else
 	FROM=1
 	TO=16
@@ -83,9 +88,10 @@ for (( i = ${FROM}; i <= ${TO}; i++ )); do
 done
 mv *.cleaned.rst prof
 mv *.rst profRaw
+mv myDisk myDisk.prof
 cd ../src/sofs14
 
-#com o makefile do prof (Makefile)
+#com o makefile do ours (Makefile)
 mv Makefile.ours Makefile
 cd ../../
 make
@@ -98,5 +104,6 @@ for (( i = ${FROM}; i <= ${TO}; i++ )); do
 done
 mv *.cleaned.rst ours
 mv *.rst oursRaw
+mv myDisk myDisk.ours
 cd ../src/sofs14
 cp Makefile.prof Makefile
