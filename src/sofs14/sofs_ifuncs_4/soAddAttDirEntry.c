@@ -231,14 +231,16 @@ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt,
     
     //**********ATTACH***********
     else{
-        
         if((stat = soReadFileCluster(nInodeEnt, 0, &dClust2)) != 0){
             return stat;
         }
-        
-        dClust2.info.de[1].nInode = nInodeDir;
-        
-        inodeEnt.size += sizeof(SODirEntry)*DPC;
+        if((inodeEnt.mode & INODE_DIR) == INODE_DIR){
+            inodeEnt.refCount++;
+            inodeDir.refCount++;
+            dClust2.info.de[1].nInode = nInodeDir;
+        }
+
+        inodeEnt.refCount++;
         
         if((stat = soWriteInode(&inodeEnt, nInodeEnt, IUIN)) != 0){
             return stat;
@@ -247,17 +249,30 @@ int soAddAttDirEntry (uint32_t nInodeDir, const char *eName, uint32_t nInodeEnt,
         if((stat = soWriteFileCluster(nInodeEnt, 0, &dClust2)) != 0){
             return stat;
         }
-        
-        
-        if((stat = soReadFileCluster(nInodeDir, clustIdx, &dClust)) != 0){
-            return stat;
+        if(idx*sizeof(SODirEntry)>=inodeDir.size)
+        {
+            
+            for(i=0;i<DPC;i++)
+            {
+                dClust.info.de[i].nInode=NULL_INODE;
+                strncpy((char*)dClust.info.de[i].name, "\0", MAX_NAME+1);
+            }
+            strncpy((char*)dClust.info.de[0].name, eName, MAX_NAME+1);
+            
+            dClust.info.de[0].nInode = nInodeEnt;
+            
+            inodeDir.size += DPC*sizeof(SODirEntry);
+            
         }
+        else{
+            if((stat = soReadFileCluster(nInodeDir, clustIdx, &dClust)) != 0){
+                return stat;
+            }
         
-        strncpy((char*)dClust.info.de[dirEntryIdx].name, eName, MAX_NAME+1);
-        dClust.info.de[dirEntryIdx].nInode = nInodeEnt;
-        
-        inodeDir.refCount++;
-        
+            strncpy((char*)dClust.info.de[dirEntryIdx].name, eName, MAX_NAME+1);
+            dClust.info.de[dirEntryIdx].nInode = nInodeEnt;
+
+        }
         if((stat = soWriteInode(&inodeDir, nInodeDir, IUIN)) !=0){
             return stat;
         }
