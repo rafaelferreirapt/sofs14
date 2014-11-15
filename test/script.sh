@@ -67,8 +67,8 @@ elif [[ "$1" == "5" ]]; then
 elif [[ "$1" == "-t" ]]; then
 	echo "TEST VECTOR: "
 	read input
-	FROM = input
-	TO = input
+	FROM=input
+	TO=input
 else
 	FROM=1
 	TO=16
