@@ -305,7 +305,7 @@ int soHandleSIndirect(SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uin
     // calculate the offset for the single indirect reference
     //ref_offset = (clustInd - N_DIRECT) % RPC;
     ref_offset = clustInd - N_DIRECT;
-
+ 
     switch (op) {
         case GET:
         {
@@ -402,7 +402,7 @@ int soHandleSIndirect(SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uin
 
             if (p_dc->stat != nInode){
                 return -EWGINODENB;
-            } 
+            }
 
             if (op != CLEAN) {
                 if ((stat = soFreeDataCluster(p_dc->info.ref[ref_offset])) != 0){
@@ -420,22 +420,28 @@ int soHandleSIndirect(SOSuperBlock *p_sb, uint32_t nInode, SOInode *p_inode, uin
             p_dc->info.ref[ref_offset] = NULL_CLUSTER;
             p_inode->cluCount--;
 
+            
             uint32_t clusterref_pos;
             for (clusterref_pos = 0; clusterref_pos < RPC; clusterref_pos++) {
-                if (p_dc->info.ref[clusterref_pos] != NULL_CLUSTER){
-                    break;
-                }
+                if (p_dc->info.ref[clusterref_pos] != NULL_CLUSTER) break;
             }
 
             if (clusterref_pos == RPC) {
-                if ((stat = soStoreDirRefClust()) != 0){
+                if ((stat = soStoreDirRefClust())){
                     return stat;
                 }
-                if ((stat = soCleanLogicalCluster(p_sb, nInode, p_inode->i1)) != 0){
+                
+                if((stat = soFreeDataCluster(p_inode->i1))){
                     return stat;
                 }
+                
+                if ((stat = soCleanLogicalCluster(p_sb, nInode, p_inode->i1))){
+                    return stat;
+                }
+                
                 p_inode->cluCount--;
                 p_inode->i1 = NULL_CLUSTER;
+                
                 return 0;
             }
             if ((stat = soStoreDirRefClust()) != 0){
