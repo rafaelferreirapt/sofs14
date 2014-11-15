@@ -165,7 +165,7 @@ int soDeplete (SOSuperBlock *p_sb)
 			dclust.prev = p_sb->dZoneInsert.cache[cPos - 1];
 		}
 
-		if(cPos != (DZONE_CACHE_SIZE - 1)){
+		if(cPos != (p_sb->dZoneInsert.cacheIdx - 1)){
 			dclust.next = p_sb->dZoneInsert.cache[cPos + 1];
 		}
 
@@ -178,7 +178,7 @@ int soDeplete (SOSuperBlock *p_sb)
 	}
 
 	/* Coloca-se o dtail a apontar para o último cluster da cache */
-	p_sb->dTail = p_sb->dZoneInsert.cache[DZONE_CACHE_SIZE - 1];
+	p_sb->dTail = p_sb->dZoneInsert.cache[p_sb->dZoneInsert.cacheIdx - 1];
 
 	if(p_sb->dHead == NULL_CLUSTER) {
 		p_sb->dHead = p_sb->dZoneInsert.cache[0];
