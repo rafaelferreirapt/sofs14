@@ -69,6 +69,36 @@ elif [[ "$1" == "-t" ]]; then
 	read input
 	FROM=input
 	TO=input
+elif [[ "$1" == "-v" ]]; then
+	echo "TEST VAL: "
+	read input
+
+	#com o makefile do prof (Makefile)
+	cd ../src/sofs14
+	mv Makefile.prof Makefile
+	cd ../../
+	make
+	cd src/sofs14
+	mv Makefile Makefile.prof
+	cd ../../test
+	./val$input.sh -bin > valTest$input.rst
+	mv *.rst profRaw
+	cd ../src/sofs14
+	cp myDisk myDisk.prof
+
+	#com o makefile do prof (Makefile)
+	mv Makefile.ours Makefile
+	cd ../../
+	make
+	cd src/sofs14
+	mv Makefile Makefile.ours
+	cd ../../test
+	./val$input.sh -bin > valTest$input.rst
+	mv *.rst oursRaw
+	cd ../src/sofs14
+	cp Makefile.prof Makefile
+	cp myDisk myDisk.ours
+	exit
 else
 	FROM=1
 	TO=16
