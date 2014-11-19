@@ -115,13 +115,13 @@ int soReadInode (SOInode *p_inode, uint32_t nInode, uint32_t status){
 	
 	memcpy(p_inode, &p_tmp_inode[offset], sizeof(SOInode));  	
 
-	if((stat = soStoreBlockInT()) != 0){
+	/*if((stat = soStoreBlockInT()) != 0){
 	 	return stat;
-	}
+	}*/
 
-	if((stat = soStoreSuperBlock()) != 0){
+	/*if((stat = soStoreSuperBlock()) != 0){
     	return stat;
-	}
+	}*/
 
 	return 0;
 }
