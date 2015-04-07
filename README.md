@@ -1,29 +1,25 @@
-# README #
+Operating Systems - File systems
+===================
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Modeling of a small file system for Linux through the implementation of the different components of its internal architecture.
 
-### What is this repository for? ###
+**Team:**
+Rafael Ferreira
+Rodrigo Cunha
+Bernardo Ferreira
+Xavier Soares
+José Silva
+Marco Leite
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+**Issues**
+[SEE Issues List](https://bitbucket.org/eypo94/sofs14/issues)
 
-### How do I get set up? ###
+**Project description**
+[See project description](https://github.com/gipmon/sofs14/blob/master/doc/SOFS14.pdf)
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
 
-### Contribution guidelines ###
+----------
 
-* Writing tests
-* Code review
-* Other guidelines
 
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+Sistemas Operativos - Universidade de Aveiro
+2014-2015
